@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎵 Company Music Player — LotusQuant</title>
+  <title>🎵 Lotusquant Music Player — LotusQuant</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <style>
     /* ─── Reset & Base ─── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,6 +43,11 @@
       align-items: center;
       gap: 10px;
       margin-bottom: 20px;
+    }
+    .app-header-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
     }
     .app-header h1 {
       font-size: 1.25rem;
@@ -224,7 +230,7 @@
       text-align: center;
     }
     .np-avatar {
-      width: 72px; height: 72px;
+      width: 96px; height: 96px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), #60a5fa);
       display: flex;
@@ -234,6 +240,13 @@
       margin-bottom: 12px;
       box-shadow: 0 0 32px rgba(124, 106, 247, 0.3);
       transition: all 0.4s;
+      overflow: hidden;
+      padding: 12px;
+    }
+    .np-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
     .np-avatar.spinning {
       animation: spin-slow 8s linear infinite;
@@ -556,7 +569,8 @@
 
   <!-- App Header -->
   <div class="app-header">
-    <h1>🎵 Company Music Player</h1>
+    <img src="/favicon.png" alt="Logo" class="app-header-logo" />
+    <h1>Lotusquant Music Player</h1>
     <span class="badge">LotusQuant Internal</span>
   </div>
 
@@ -610,7 +624,9 @@
   <div class="card">
     <!-- Now Playing -->
     <div class="card-section now-playing">
-      <div class="np-avatar" id="npAvatar">🎵</div>
+      <div class="np-avatar" id="npAvatar">
+        <img src="/favicon.png" alt="Logo" />
+      </div>
       <div id="npContent">
         <p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>
       </div>
@@ -920,7 +936,6 @@ function toggleMember(name, chipEl) {
 function renderNowPlaying() {
   const song = state.playlist[state.currentIndex];
   if (!song) {
-    npAvatar.textContent = '🎵';
     npAvatar.classList.remove('spinning');
     npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
     progressArea.style.display = 'none';
@@ -928,9 +943,6 @@ function renderNowPlaying() {
     return;
   }
 
-  const initials = song.name.slice(0,2).toUpperCase();
-  npAvatar.textContent = initials;
-  npAvatar.style.fontSize = '1.3rem';
   npContent.innerHTML = `
     <p class="np-member">👤 ${song.name}</p>
     <p class="np-title">${song.title}</p>
