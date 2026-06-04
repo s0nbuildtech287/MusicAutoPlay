@@ -81,7 +81,7 @@ module.exports = async (req, res) => {
     
     // Build yt-dlp arguments
     const args = [
-      '-f', 'bestaudio/best',
+      '-f', 'bestaudio/best/worstaudio/worst',
       '--no-playlist',
       '--no-warnings',
       '--quiet',
