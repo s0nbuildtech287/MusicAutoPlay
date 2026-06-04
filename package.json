@@ -4,7 +4,8 @@
   "description": "LotusQuant Internal Music Player",
   "scripts": {
     "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "bash install-yt-dlp.sh || true"
   },
   "dependencies": {
     "express": "^5.2.1"
