@@ -2,8 +2,10 @@ services:
   - type: web
     name: company-music-player
     env: node
-    buildCommand: npm install
+    buildCommand: npm install && bash install-yt-dlp.sh
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
         value: 18
+      - key: COOKIES_URL
+        value: YOUR_GIST_RAW_URL_HERE

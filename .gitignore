@@ -31,5 +31,9 @@ yt-dlp
 yt-dlp_linux
 yt-dlp_macos
 
+# Cookies (sensitive)
+cookies.txt
+*.txt.tmp
+
 # Vercel
 .vercel/

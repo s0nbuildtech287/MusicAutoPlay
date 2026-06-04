@@ -1,10 +1,48 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
+const https = require('https');
 
 // Validate YouTube video ID (11 alphanumeric chars + - _)
 function isValidVideoId(id) {
   return /^[\w-]{11}$/.test(id);
+}
+
+// Download cookies from URL (for Render deployment)
+async function ensureCookies() {
+  const cookiesPath = path.join(__dirname, '..', 'cookies.txt');
+  
+  // If cookies already exist, skip
+  if (fs.existsSync(cookiesPath)) {
+    return cookiesPath;
+  }
+  
+  // Check if COOKIES_URL env var is set
+  const cookiesUrl = process.env.COOKIES_URL;
+  if (!cookiesUrl) {
+    console.log('[Stream] No cookies configured (OK for local dev)');
+    return null;
+  }
+  
+  // Download cookies
+  return new Promise((resolve, reject) => {
+    console.log('[Stream] Downloading cookies from URL...');
+    https.get(cookiesUrl, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to download cookies: ${res.statusCode}`));
+        return;
+      }
+      
+      const file = fs.createWriteStream(cookiesPath);
+      res.pipe(file);
+      file.on('finish', () => {
+        file.close();
+        console.log('[Stream] Cookies downloaded successfully');
+        resolve(cookiesPath);
+      });
+    }).on('error', reject);
+  });
 }
 
 module.exports = async (req, res) => {
@@ -23,8 +61,11 @@ module.exports = async (req, res) => {
   console.log(`[Stream] Fetching: ${url}`);
 
   try {
-    // Spawn yt-dlp process
-    const ytdlp = spawn(ytdlpPath, [
+    // Ensure cookies are available (download if needed)
+    const cookiesPath = await ensureCookies();
+    
+    // Build yt-dlp arguments
+    const args = [
       '-f', 'bestaudio/best',
       '--no-playlist',
       '--no-warnings',
@@ -33,7 +74,16 @@ module.exports = async (req, res) => {
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       '-o', '-',  // Output to stdout
       url
-    ]);
+    ];
+    
+    // Add cookies if available
+    if (cookiesPath) {
+      args.splice(args.length - 2, 0, '--cookies', cookiesPath);
+      console.log('[Stream] Using cookies for authentication');
+    }
+    
+    // Spawn yt-dlp process
+    const ytdlp = spawn(ytdlpPath, args);
 
     res.setHeader('Content-Type', 'audio/webm');
     res.setHeader('Transfer-Encoding', 'chunked');
