@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const os = require('os');
 
 // Validate YouTube video ID (11 alphanumeric chars + - _)
 function isValidVideoId(id) {
@@ -14,7 +15,10 @@ module.exports = async (req, res) => {
   }
 
   const url = `https://www.youtube.com/watch?v=${id}`;
-  const ytdlpPath = path.join(__dirname, '..', 'yt-dlp.exe');
+  
+  // Use different binary based on OS
+  const isWindows = os.platform() === 'win32';
+  const ytdlpPath = path.join(__dirname, '..', isWindows ? 'yt-dlp.exe' : 'yt-dlp');
 
   console.log(`[Stream] Fetching: ${url}`);
 

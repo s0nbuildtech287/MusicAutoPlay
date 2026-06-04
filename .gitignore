@@ -25,9 +25,11 @@ desktop.ini
 dist/
 build/
 
-# yt-dlp binary (download lại khi deploy)
+# yt-dlp binary (download khi deploy)
 yt-dlp.exe
 yt-dlp
+yt-dlp_linux
+yt-dlp_macos
 
 # Vercel
 .vercel/

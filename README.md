@@ -127,30 +127,30 @@ company-music-player/
 └── yt-dlp.exe             # yt-dlp binary (gitignored)
 ```
 
-## 🚢 Deploy lên Vercel
+## 🚢 Deploy lên Render
 
-### Lưu ý quan trọng
+### Bước 1: Chuẩn bị
+1. Push code lên GitHub
+2. Đảm bảo có file `render.yaml` trong repo
 
-Vercel **không hỗ trợ chạy binary** như `yt-dlp.exe` trên serverless functions. 
+### Bước 2: Deploy
+1. Vào https://render.com và đăng ký (miễn phí)
+2. Click **New** → **Web Service**
+3. Connect GitHub account và chọn repo này
+4. Render tự detect config từ `render.yaml`:
+   - Build Command: `npm install && curl -L ... yt-dlp ...`
+   - Start Command: `npm start`
+5. Click **Create Web Service**
+6. Đợi 3-5 phút → nhận URL: `https://your-app.onrender.com`
 
-**Giải pháp:**
-1. **Deploy server lên VPS** (DigitalOcean, AWS EC2, etc.)
-2. **Dùng Docker** để package `yt-dlp` cùng app
-3. **Chuyển sang dịch vụ khác** như Railway, Render (hỗ trợ binary)
+### Lưu ý Render Free Tier
+- ✅ Miễn phí hoàn toàn
+- ⚠️ App ngủ sau 15 phút không dùng
+- ⚠️ Lần đầu truy cập sau khi ngủ sẽ chậm ~30s (cold start)
+- ✅ Sau đó hoạt động bình thường
 
-### Deploy lên Railway (khuyến nghị)
-
-```bash
-# Cài Railway CLI
-npm i -g @railway/cli
-
-# Deploy
-railway login
-railway init
-railway up
-```
-
-Railway sẽ tự detect Node.js app và chạy `npm start`.
+### Nếu muốn app không ngủ (Paid)
+Upgrade lên Render Paid ($7/tháng) để app chạy 24/7.
 
 ## 🔧 Troubleshooting
 
