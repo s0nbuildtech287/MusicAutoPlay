@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎵 Lotusquant Music Player — LotusQuant</title>
-  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
   <style>
     /* ─── Reset & Base ─── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -593,8 +595,8 @@
         <div class="control-group">
           <span class="label-sm">Chế độ</span>
           <div class="mode-tabs">
-            <button class="mode-tab active" id="tabRoundRobin">Round-Robin</button>
-            <button class="mode-tab" id="tabBurst">Burst</button>
+            <button class="mode-tab active" id="tabRoundRobin">Luân phiên</button>
+            <button class="mode-tab" id="tabBurst">Liên tục</button>
           </div>
           <div id="burstConfig" class="hidden" style="display:flex;align-items:center;gap:6px;">
             <select class="burst-select" id="burstN">
@@ -835,6 +837,9 @@ async function loadSheet() {
     buildPlaylist();
     toast(`✅ Đã load ${state.songs.length} bài của ${state.members.length} người`);
     checkResume();
+    
+    // Show shortened URL
+    shortenUrlDisplay();
   } catch (e) {
     console.error(e);
     toast(`❌ Lỗi load sheet: ${e.message}`);
@@ -843,6 +848,40 @@ async function loadSheet() {
     loadBtn.disabled = false;
   }
 }
+
+// Shorten URL display
+function shortenUrlDisplay() {
+  const url = sheetUrl.value.trim();
+  if (!url) return;
+  
+  try {
+    const u = new URL(url);
+    const domain = u.hostname.replace('docs.google.com', 'Google Sheet');
+    sheetUrl.dataset.fullUrl = url;
+    sheetUrl.value = `✓ ${domain}`;
+    sheetUrl.style.color = 'var(--done)';
+  } catch {
+    sheetUrl.dataset.fullUrl = url;
+    sheetUrl.value = '✓ Sheet đã load';
+    sheetUrl.style.color = 'var(--done)';
+  }
+}
+
+// Restore full URL on focus
+sheetUrl.addEventListener('focus', () => {
+  if (sheetUrl.dataset.fullUrl) {
+    sheetUrl.value = sheetUrl.dataset.fullUrl;
+    sheetUrl.style.color = '';
+    sheetUrl.select();
+  }
+});
+
+// Shorten again on blur
+sheetUrl.addEventListener('blur', () => {
+  if (sheetUrl.dataset.fullUrl && sheetUrl.value === sheetUrl.dataset.fullUrl) {
+    shortenUrlDisplay();
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 //  BUILD PLAYLIST
