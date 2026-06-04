@@ -43,13 +43,25 @@ curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o yt-d
 chmod +x yt-dlp
 ```
 
-### 4. Chạy server
+### 4. Chạy app
+
+**Cách 1: Desktop App (Khuyến nghị)**
+
+Double-click file **`start-app.bat`** hoặc chạy:
+
+```bash
+npm start
+```
+
+→ App sẽ mở trong cửa sổ riêng, không cần browser.
+
+**Cách 2: Web Browser**
 
 ```bash
 npm run dev
 ```
 
-Mở browser: **http://localhost:7777**
+→ Mở browser vào: **http://localhost:7777**
 
 ## 📊 Cấu hình Google Sheet
 
@@ -127,30 +139,25 @@ company-music-player/
 └── yt-dlp.exe             # yt-dlp binary (gitignored)
 ```
 
-## 🚢 Deploy lên Render
+## 🚀 Chạy Desktop App
 
-### Bước 1: Chuẩn bị
-1. Push code lên GitHub
-2. Đảm bảo có file `render.yaml` trong repo
+### Windows
 
-### Bước 2: Deploy
-1. Vào https://render.com và đăng ký (miễn phí)
-2. Click **New** → **Web Service**
-3. Connect GitHub account và chọn repo này
-4. Render tự detect config từ `render.yaml`:
-   - Build Command: `npm install && curl -L ... yt-dlp ...`
-   - Start Command: `npm start`
-5. Click **Create Web Service**
-6. Đợi 3-5 phút → nhận URL: `https://your-app.onrender.com`
+Double-click file **`start-app.bat`** hoặc chạy lệnh:
 
-### Lưu ý Render Free Tier
-- ✅ Miễn phí hoàn toàn
-- ⚠️ App ngủ sau 15 phút không dùng
-- ⚠️ Lần đầu truy cập sau khi ngủ sẽ chậm ~30s (cold start)
-- ✅ Sau đó hoạt động bình thường
+```bash
+npm start
+```
 
-### Nếu muốn app không ngủ (Paid)
-Upgrade lên Render Paid ($7/tháng) để app chạy 24/7.
+App sẽ mở trong cửa sổ riêng, tự động load nhạc từ Google Sheet.
+
+### Chạy server web (không cần Electron)
+
+```bash
+npm run dev
+```
+
+Mở browser: **http://localhost:7777**
 
 ## 🔧 Troubleshooting
 

@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: company-music-player
-    env: node
-    buildCommand: npm install && bash install-yt-dlp.sh
-    startCommand: npm start

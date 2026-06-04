@@ -1,0 +1,3 @@
+@echo off
+echo Starting Company Music Player...
+npm start
