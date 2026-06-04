@@ -71,16 +71,17 @@ module.exports = async (req, res) => {
       '--no-warnings',
       '--quiet',
       '--no-check-certificates',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      '-o', '-',  // Output to stdout
-      url
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     ];
     
     // Add cookies if available
     if (cookiesPath) {
-      args.splice(args.length - 2, 0, '--cookies', cookiesPath);
+      args.push('--cookies', cookiesPath);
       console.log('[Stream] Using cookies for authentication');
     }
+    
+    // Add output and URL at the end
+    args.push('-o', '-', url);
     
     // Spawn yt-dlp process
     const ytdlp = spawn(ytdlpPath, args);
