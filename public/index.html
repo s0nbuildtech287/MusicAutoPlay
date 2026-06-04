@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎵 Company Music Player — LotusQuant</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f14;
+      --surface:   #1a1a24;
+      --surface2:  #22222f;
+      --border:    #2e2e40;
+      --accent:    #7c6af7;
+      --accent2:   #a78bfa;
+      --text:      #e8e8f0;
+      --text-muted:#8888aa;
+      --playing:   #7c6af7;
+      --done:      #4ade80;
+      --radius:    12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    /* ─── Header ─── */
+    .app-header {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .app-header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent2), #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .app-header .badge {
+      font-size: 0.7rem;
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    /* ─── Card ─── */
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .card-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-section:last-child { border-bottom: none; }
+
+    /* ─── Sheet URL Row ─── */
+    .sheet-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .sheet-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .sheet-row input:focus { border-color: var(--accent); }
+    .sheet-row input::placeholder { color: var(--text-muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 9px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── Mode & Filter Row ─── */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .label-sm {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Radio tabs */
+    .mode-tabs {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .mode-tab {
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .mode-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .burst-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .burst-select:focus { border-color: var(--accent); }
+    .burst-select:disabled { opacity: 0.4; }
+
+    /* Filter chips */
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .chip.active {
+      border-color: var(--accent);
+      color: var(--accent2);
+      background: rgba(124, 106, 247, 0.12);
+    }
+    .chip .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .no-members {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* ─── Now Playing ─── */
+    .now-playing {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px 20px;
+      gap: 4px;
+      text-align: center;
+    }
+    .np-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 12px;
+      box-shadow: 0 0 32px rgba(124, 106, 247, 0.3);
+      transition: all 0.4s;
+    }
+    .np-avatar.spinning {
+      animation: spin-slow 8s linear infinite;
+    }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .np-member {
+      font-size: 0.8rem;
+      color: var(--accent2);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .np-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+    .np-artist {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .np-idle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* ─── Progress Bar ─── */
+    .progress-area {
+      width: 100%;
+      margin-top: 16px;
+    }
+    .progress-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s linear;
+      pointer-events: none;
+    }
+    .progress-thumb {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent2);
+      left: 0%;
+      transition: left 0.3s linear;
+      pointer-events: none;
+    }
+
+    /* ─── Controls ─── */
+    .player-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .ctrl-btn {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .ctrl-btn:hover { background: var(--border); color: var(--text); }
+    .ctrl-btn.play-pause {
+      width: 54px; height: 54px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.4rem;
+    }
+    .ctrl-btn.play-pause:hover { opacity: 0.88; }
+
+    /* Volume */
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 0 4px;
+    }
+    .vol-icon { font-size: 1rem; color: var(--text-muted); }
+    .vol-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent2);
+      cursor: pointer;
+    }
+
+    /* ─── Playlist ─── */
+    .playlist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .playlist-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .playlist-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .playlist-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .playlist-list::-webkit-scrollbar { width: 4px; }
+    .playlist-list::-webkit-scrollbar-track { background: transparent; }
+    .playlist-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .pl-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s;
+      border: 1px solid transparent;
+    }
+    .pl-item:hover { background: var(--surface2); }
+    .pl-item.is-playing {
+      background: rgba(124, 106, 247, 0.12);
+      border-color: rgba(124, 106, 247, 0.3);
+    }
+    .pl-item.is-done { opacity: 0.5; }
+    .pl-num {
+      width: 20px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .pl-item.is-playing .pl-num { color: var(--accent2); }
+    .pl-icon {
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .pl-info { flex: 1; min-width: 0; }
+    .pl-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pl-item.is-playing .pl-name { color: var(--accent2); }
+    .pl-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pl-member-tag {
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: rgba(124, 106, 247, 0.15);
+      color: var(--accent2);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .empty-playlist {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .empty-playlist .big { font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* ─── Resume Banner ─── */
+    .resume-banner {
+      width: 100%;
+      max-width: 720px;
+      background: rgba(124, 106, 247, 0.12);
+      border: 1px solid rgba(124, 106, 247, 0.4);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .resume-banner p { font-size: 0.85rem; color: var(--text); }
+    .resume-banner p span { color: var(--accent2); font-weight: 600; }
+    .resume-actions { display: flex; gap: 8px; }
+
+    /* ─── Toast ─── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      font-size: 0.82rem;
+      color: var(--text);
+      animation: toast-in 0.25s ease, toast-out 0.3s ease 2.7s forwards;
+      white-space: nowrap;
+    }
+    @keyframes toast-in  { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes toast-out { from { opacity:1; } to { opacity:0; transform: translateY(10px); } }
+
+    /* ─── Autoplay Overlay ─── */
+    .autoplay-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 15, 20, 0.85);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+    }
+    .autoplay-overlay .big-icon { font-size: 4rem; }
+    .autoplay-overlay h2 { font-size: 1.2rem; }
+    .autoplay-overlay p { font-size: 0.85rem; color: var(--text-muted); }
+    .autoplay-overlay.hidden { display: none; }
+
+    /* ─── Loading Spinner ─── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Misc ─── */
+    .divider { height: 1px; background: var(--border); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Autoplay Gate -->
+  <div class="autoplay-overlay" id="autoplayOverlay">
+    <div class="big-icon">▶️</div>
+    <h2>Company Music Player</h2>
+    <p>Click để bắt đầu nghe nhạc</p>
+    <button class="btn btn-primary" id="startBtn" style="padding:12px 32px;font-size:1rem;">
+      Bắt đầu
+    </button>
+  </div>
+
+  <!-- Resume Banner -->
+  <div class="resume-banner hidden" id="resumeBanner">
+    <p>🕐 Hôm qua dừng ở <span id="resumeLabel">—</span> — Tiếp tục?</p>
+    <div class="resume-actions">
+      <button class="btn btn-primary" id="resumeYes">✅ Tiếp tục</button>
+      <button class="btn btn-ghost" id="resumeNo">🔄 Phát từ đầu</button>
+    </div>
+  </div>
+
+  <!-- App Header -->
+  <div class="app-header">
+    <h1>🎵 Company Music Player</h1>
+    <span class="badge">LotusQuant Internal</span>
+  </div>
+
+  <!-- Sheet URL Card -->
+  <div class="card">
+    <div class="card-section">
+      <div class="sheet-row">
+        <input type="text" id="sheetUrl" placeholder="Dán Google Sheet URL hoặc CSV URL vào đây…" />
+        <button class="btn btn-primary" id="loadBtn">
+          <span id="loadBtnText">Load</span>
+        </button>
+        <button class="btn btn-ghost" id="saveUrlBtn" title="Lưu URL">💾</button>
+      </div>
+    </div>
+
+    <!-- Mode + Filter -->
+    <div class="card-section">
+      <div class="controls-row">
+        <!-- Mode -->
+        <div class="control-group">
+          <span class="label-sm">Chế độ</span>
+          <div class="mode-tabs">
+            <button class="mode-tab active" id="tabRoundRobin">Round-Robin</button>
+            <button class="mode-tab" id="tabBurst">Burst</button>
+          </div>
+          <div id="burstConfig" class="hidden" style="display:flex;align-items:center;gap:6px;">
+            <select class="burst-select" id="burstN">
+              <option value="2">2 bài</option>
+              <option value="3" selected>3 bài</option>
+              <option value="4">4 bài</option>
+              <option value="5">5 bài</option>
+            </select>
+            <span style="font-size:0.75rem;color:var(--text-muted)">/người</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="card-section" id="filterSection">
+      <div class="controls-row">
+        <span class="label-sm">Filter</span>
+        <div class="filter-chips" id="filterChips">
+          <span class="no-members">Chưa có dữ liệu — hãy Load Sheet trước</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Card -->
+  <div class="card">
+    <!-- Now Playing -->
+    <div class="card-section now-playing">
+      <div class="np-avatar" id="npAvatar">🎵</div>
+      <div id="npContent">
+        <p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>
+      </div>
+      <!-- Progress -->
+      <div class="progress-area" id="progressArea" style="display:none;width:100%;">
+        <div class="progress-times">
+          <span id="timeElapsed">0:00</span>
+          <span id="timeDuration">0:00</span>
+        </div>
+        <div class="progress-track" id="progressTrack">
+          <div class="progress-fill" id="progressFill"></div>
+          <div class="progress-thumb" id="progressThumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card-section">
+      <div class="player-controls">
+        <button class="ctrl-btn" id="prevBtn" title="Bài trước">⏮</button>
+        <button class="ctrl-btn play-pause" id="playPauseBtn" title="Play/Pause">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="Bài tiếp">⏭</button>
+      </div>
+      <div class="volume-row">
+        <span class="vol-icon" id="volIcon">🔊</span>
+        <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" />
+        <span style="font-size:0.75rem;color:var(--text-muted);width:32px;text-align:right" id="volLabel">80%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playlist Card -->
+  <div class="card">
+    <div class="card-section">
+      <div class="playlist-header">
+        <span class="playlist-title">Playlist</span>
+        <span class="playlist-count" id="playlistCount">0 bài</span>
+      </div>
+      <div class="playlist-list" id="playlistList">
+        <div class="empty-playlist">
+          <div class="big">🎶</div>
+          <p>Playlist trống — Load Sheet để bắt đầu</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Hidden Audio -->
+  <audio id="audioEl" preload="none"></audio>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  songs: [],            // raw songs from sheet [{stt, name, title, artist, url, vid}]
+  members: [],          // unique members in order
+  activeMembers: new Set(),
+  mode: 'roundrobin',   // 'roundrobin' | 'burst'
+  burstN: 3,
+  playlist: [],         // built playlist [{...song, plIndex}]
+  currentIndex: -1,
+  isPlaying: false,
+  volume: 80,
+  saveTimer: null,
+};
+
+// ═══════════════════════════════════════════════════════
+//  ELEMENTS
+// ═══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const audioEl      = $('audioEl');
+const sheetUrl     = $('sheetUrl');
+const loadBtn      = $('loadBtn');
+const loadBtnText  = $('loadBtnText');
+const saveUrlBtn   = $('saveUrlBtn');
+const tabRR        = $('tabRoundRobin');
+const tabBurst     = $('tabBurst');
+const burstConfig  = $('burstConfig');
+const burstN       = $('burstN');
+const filterChips  = $('filterChips');
+const npAvatar     = $('npAvatar');
+const npContent    = $('npContent');
+const progressArea = $('progressArea');
+const progressFill = $('progressFill');
+const progressThumb= $('progressThumb');
+const progressTrack= $('progressTrack');
+const timeElapsed  = $('timeElapsed');
+const timeDuration = $('timeDuration');
+const playPauseBtn = $('playPauseBtn');
+const prevBtn      = $('prevBtn');
+const nextBtn      = $('nextBtn');
+const volSlider    = $('volSlider');
+const volLabel     = $('volLabel');
+const volIcon      = $('volIcon');
+const playlistList = $('playlistList');
+const playlistCount= $('playlistCount');
+const resumeBanner = $('resumeBanner');
+const resumeLabel  = $('resumeLabel');
+const resumeYes    = $('resumeYes');
+const resumeNo     = $('resumeNo');
+const autoplayOverlay = $('autoplayOverlay');
+const startBtn     = $('startBtn');
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function fmtTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function extractVideoId(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.searchParams.get('v') || u.pathname.split('/').pop() || null;
+  } catch {
+    // youtu.be/xxx or bare id
+    const m = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
+    return m ? m[1] : null;
+  }
+}
+
+function toast(msg, duration = 3000) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  $('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function csvToRows(text) {
+  const lines = text.trim().split('\n');
+  return lines.map(line => {
+    // Simple CSV parse (handles quoted fields)
+    const row = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; continue; }
+      cur += c;
+    }
+    row.push(cur.trim());
+    return row;
+  });
+}
+
+function convertToCSVUrl(raw) {
+  // Already a CSV export URL
+  if (raw.includes('/pub?') && raw.includes('output=csv')) return raw;
+  if (raw.includes('export?format=csv')) return raw;
+  // Spreadsheet URL → CSV export
+  const m = raw.match(/\/spreadsheets\/d\/([\w-]+)/);
+  if (m) {
+    const gid = raw.match(/gid=(\d+)/);
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv${gid ? '&gid='+gid[1] : ''}`;
+  }
+  return raw;
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOAD SHEET
+// ═══════════════════════════════════════════════════════
+async function loadSheet() {
+  const raw = sheetUrl.value.trim();
+  if (!raw) { toast('⚠️ Vui lòng nhập URL Google Sheet'); return; }
+
+  loadBtnText.innerHTML = '<span class="spinner"></span>';
+  loadBtn.disabled = true;
+
+  try {
+    const csvUrl = convertToCSVUrl(raw);
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    const rows = csvToRows(text).filter(r => r.length >= 5);
+    // Detect header row: skip if first column is not a number
+    const start = isNaN(parseInt(rows[0]?.[0])) ? 1 : 0;
+
+    state.songs = [];
+    for (let i = start; i < rows.length; i++) {
+      const [stt, name, title, artist, url] = rows[i];
+      if (!url || !url.includes('http')) continue;
+      const vid = extractVideoId(url);
+      if (!vid) continue;
+      state.songs.push({ stt: stt || i, name: (name||'').trim(), title: (title||'').trim(), artist: (artist||'').trim(), url, vid });
+    }
+
+    if (state.songs.length === 0) {
+      toast('❌ Không tìm thấy bài hát nào trong Sheet');
+      return;
+    }
+
+    // Extract unique members (preserving order)
+    state.members = [...new Set(state.songs.map(s => s.name).filter(Boolean))];
+    state.activeMembers = new Set(state.members);
+
+    renderFilterChips();
+    buildPlaylist();
+    toast(`✅ Đã load ${state.songs.length} bài của ${state.members.length} người`);
+    checkResume();
+  } catch (e) {
+    console.error(e);
+    toast(`❌ Lỗi load sheet: ${e.message}`);
+  } finally {
+    loadBtnText.textContent = 'Load';
+    loadBtn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUILD PLAYLIST
+// ═══════════════════════════════════════════════════════
+function buildPlaylist(keepCurrent = false) {
+  const active = state.members.filter(m => state.activeMembers.has(m));
+  if (active.length === 0) {
+    toast('⚠️ Bạn đã bỏ chọn tất cả mọi người!');
+    return;
+  }
+
+  const byMember = {};
+  active.forEach(m => {
+    byMember[m] = state.songs.filter(s => s.name === m);
+  });
+
+  const playlist = [];
+  const maxSongs = Math.max(...active.map(m => byMember[m].length));
+
+  if (state.mode === 'roundrobin') {
+    for (let i = 0; i < maxSongs; i++) {
+      active.forEach(m => {
+        if (byMember[m][i]) playlist.push({ ...byMember[m][i] });
+      });
+    }
+  } else {
+    // Burst
+    const N = state.burstN;
+    let done = false;
+    let round = 0;
+    while (!done) {
+      done = true;
+      active.forEach(m => {
+        const start = round * N;
+        const chunk = byMember[m].slice(start, start + N);
+        if (chunk.length > 0) {
+          done = false;
+          chunk.forEach(s => playlist.push({ ...s }));
+        }
+      });
+      round++;
+    }
+  }
+
+  // Add playlist index
+  state.playlist = playlist.map((s, i) => ({ ...s, plIndex: i }));
+
+  if (!keepCurrent) state.currentIndex = -1;
+
+  renderPlaylist();
+  renderNowPlaying();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function renderFilterChips() {
+  filterChips.innerHTML = '';
+  if (state.members.length === 0) {
+    filterChips.innerHTML = '<span class="no-members">Chưa có dữ liệu</span>';
+    return;
+  }
+  state.members.forEach(m => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (state.activeMembers.has(m) ? ' active' : '');
+    chip.innerHTML = `<span class="dot"></span>${m}`;
+    chip.addEventListener('click', () => toggleMember(m, chip));
+    filterChips.appendChild(chip);
+  });
+}
+
+function toggleMember(name, chipEl) {
+  if (state.activeMembers.has(name)) {
+    if (state.activeMembers.size === 1) { toast('⚠️ Phải giữ ít nhất 1 người'); return; }
+    state.activeMembers.delete(name);
+    chipEl.classList.remove('active');
+  } else {
+    state.activeMembers.add(name);
+    chipEl.classList.add('active');
+  }
+  const curSong = state.playlist[state.currentIndex];
+  buildPlaylist(true);
+  // Try to keep current song in new playlist
+  if (curSong) {
+    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+    if (newIdx !== -1) state.currentIndex = newIdx;
+  }
+  renderPlaylist();
+}
+
+function renderNowPlaying() {
+  const song = state.playlist[state.currentIndex];
+  if (!song) {
+    npAvatar.textContent = '🎵';
+    npAvatar.classList.remove('spinning');
+    npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
+    progressArea.style.display = 'none';
+    playPauseBtn.textContent = '▶';
+    return;
+  }
+
+  const initials = song.name.slice(0,2).toUpperCase();
+  npAvatar.textContent = initials;
+  npAvatar.style.fontSize = '1.3rem';
+  npContent.innerHTML = `
+    <p class="np-member">👤 ${song.name}</p>
+    <p class="np-title">${song.title}</p>
+    <p class="np-artist">🎤 ${song.artist}</p>
+  `;
+  progressArea.style.display = 'block';
+  playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
+  if (state.isPlaying) npAvatar.classList.add('spinning');
+  else npAvatar.classList.remove('spinning');
+}
+
+function renderPlaylist() {
+  const pl = state.playlist;
+  playlistCount.textContent = `${pl.length} bài`;
+
+  if (pl.length === 0) {
+    playlistList.innerHTML = `
+      <div class="empty-playlist">
+        <div class="big">🎶</div>
+        <p>Playlist trống</p>
+      </div>`;
+    return;
+  }
+
+  playlistList.innerHTML = '';
+  pl.forEach((song, i) => {
+    const item = document.createElement('div');
+    item.className = 'pl-item' +
+      (i === state.currentIndex ? ' is-playing' : '') +
+      (i < state.currentIndex ? ' is-done' : '');
+    item.innerHTML = `
+      <span class="pl-num">${i === state.currentIndex ? '▶' : i+1}</span>
+      <div class="pl-info">
+        <div class="pl-name">${song.title}</div>
+        <div class="pl-sub">${song.artist}</div>
+      </div>
+      <span class="pl-member-tag">${song.name}</span>
+    `;
+    item.addEventListener('click', () => jumpTo(i));
+    playlistList.appendChild(item);
+  });
+
+  // Scroll current into view
+  const active = playlistList.querySelector('.is-playing');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════
+//  PLAYBACK
+// ═══════════════════════════════════════════════════════
+function playSong(index) {
+  if (index < 0 || index >= state.playlist.length) return;
+  state.currentIndex = index;
+  const song = state.playlist[index];
+
+  // Set audio src to our API endpoint
+  audioEl.src = `/api/stream?id=${song.vid}`;
+  audioEl.volume = state.volume / 100;
+
+  audioEl.play().then(() => {
+    state.isPlaying = true;
+    renderNowPlaying();
+    renderPlaylist();
+    saveProgress();
+  }).catch(err => {
+    console.warn('Autoplay blocked:', err);
+  });
+}
+
+function jumpTo(index) {
+  playSong(index);
+}
+
+function playNext(skip = false) {
+  let next = state.currentIndex + 1;
+  if (next >= state.playlist.length) next = 0; // loop
+  if (skip) toast(`⏭ Bỏ qua: ${state.playlist[state.currentIndex]?.title || ''}`);
+  playSong(next);
+}
+
+function playPrev() {
+  // If >3s into song, restart; else go to previous
+  if (audioEl.currentTime > 3) {
+    audioEl.currentTime = 0;
+    return;
+  }
+  let prev = state.currentIndex - 1;
+  if (prev < 0) prev = state.playlist.length - 1;
+  playSong(prev);
+}
+
+function togglePlayPause() {
+  if (state.playlist.length === 0) { toast('⚠️ Load Sheet trước đã'); return; }
+  if (state.currentIndex === -1) { playSong(0); return; }
+
+  if (audioEl.paused) {
+    audioEl.play().then(() => {
+      state.isPlaying = true;
+      renderNowPlaying();
+    });
+  } else {
+    audioEl.pause();
+    state.isPlaying = false;
+    renderNowPlaying();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUDIO EVENTS
+// ═══════════════════════════════════════════════════════
+audioEl.addEventListener('ended', () => {
+  state.isPlaying = false;
+  playNext();
+});
+
+audioEl.addEventListener('error', () => {
+  const song = state.playlist[state.currentIndex];
+  if (song) {
+    toast(`⚠️ Bỏ qua: ${song.title} (lỗi stream)`);
+    setTimeout(() => playNext(false), 2000);
+  }
+});
+
+audioEl.addEventListener('timeupdate', () => {
+  const dur = audioEl.duration || 0;
+  const cur = audioEl.currentTime || 0;
+  const pct = dur ? (cur / dur) * 100 : 0;
+
+  progressFill.style.width  = pct + '%';
+  progressThumb.style.left  = pct + '%';
+  timeElapsed.textContent   = fmtTime(cur);
+  timeDuration.textContent  = fmtTime(dur);
+});
+
+audioEl.addEventListener('play',  () => { state.isPlaying = true;  renderNowPlaying(); });
+audioEl.addEventListener('pause', () => { state.isPlaying = false; renderNowPlaying(); });
+
+// Click on progress bar to seek
+progressTrack.addEventListener('click', e => {
+  const rect = progressTrack.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  if (audioEl.duration) audioEl.currentTime = pct * audioEl.duration;
+});
+
+// ═══════════════════════════════════════════════════════
+//  VOLUME
+// ═══════════════════════════════════════════════════════
+function updateVolume(v) {
+  state.volume = v;
+  audioEl.volume = v / 100;
+  volLabel.textContent = v + '%';
+  volIcon.textContent = v === 0 ? '🔇' : v < 50 ? '🔉' : '🔊';
+}
+volSlider.addEventListener('input', () => updateVolume(parseInt(volSlider.value)));
+
+// ═══════════════════════════════════════════════════════
+//  PERSIST (localStorage)
+// ═══════════════════════════════════════════════════════
+function saveProgress() {
+  if (state.currentIndex === -1) return;
+  const song = state.playlist[state.currentIndex];
+  localStorage.setItem('mcp_save', JSON.stringify({
+    playlistIndex: state.currentIndex,
+    currentTime:   audioEl.currentTime,
+    sheetUrl:      sheetUrl.value,
+    song:          song,
+    savedAt:       new Date().toLocaleString('vi-VN'),
+  }));
+}
+
+// Auto-save every 5 seconds
+setInterval(() => { if (state.isPlaying) saveProgress(); }, 5000);
+
+function checkResume() {
+  const raw = localStorage.getItem('mcp_save');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (!data.sheetUrl || data.sheetUrl !== sheetUrl.value) return;
+    if (data.playlistIndex === undefined || !data.song) return;
+
+    const song = data.song;
+    const t = fmtTime(data.currentTime);
+    resumeLabel.textContent = `${song.name} — ${song.title} (${t})`;
+    resumeBanner.classList.remove('hidden');
+
+    resumeYes.onclick = () => {
+      resumeBanner.classList.add('hidden');
+      state.currentIndex = data.playlistIndex;
+      playSong(state.currentIndex);
+      setTimeout(() => { audioEl.currentTime = data.currentTime; }, 800);
+    };
+    resumeNo.onclick = () => {
+      resumeBanner.classList.add('hidden');
+      localStorage.removeItem('mcp_save');
+      playSong(0);
+    };
+  } catch {}
+}
+
+function loadSavedUrl() {
+  const saved = localStorage.getItem('mcp_sheetUrl');
+  if (saved) sheetUrl.value = saved;
+}
+
+saveUrlBtn.addEventListener('click', () => {
+  if (!sheetUrl.value.trim()) { toast('⚠️ Chưa có URL để lưu'); return; }
+  localStorage.setItem('mcp_sheetUrl', sheetUrl.value.trim());
+  toast('💾 Đã lưu URL');
+});
+
+// ═══════════════════════════════════════════════════════
+//  MODE CONTROLS
+// ═══════════════════════════════════════════════════════
+tabRR.addEventListener('click', () => {
+  state.mode = 'roundrobin';
+  tabRR.classList.add('active');
+  tabBurst.classList.remove('active');
+  burstConfig.classList.add('hidden');
+  buildPlaylist(true);
+});
+
+tabBurst.addEventListener('click', () => {
+  state.mode = 'burst';
+  tabBurst.classList.add('active');
+  tabRR.classList.remove('active');
+  burstConfig.classList.remove('hidden');
+  buildPlaylist(true);
+});
+
+burstN.addEventListener('change', () => {
+  state.burstN = parseInt(burstN.value);
+  buildPlaylist(true);
+});
+
+// ═══════════════════════════════════════════════════════
+//  BUTTON EVENTS
+// ═══════════════════════════════════════════════════════
+loadBtn.addEventListener('click', loadSheet);
+sheetUrl.addEventListener('keydown', e => { if (e.key === 'Enter') loadSheet(); });
+playPauseBtn.addEventListener('click', togglePlayPause);
+prevBtn.addEventListener('click', playPrev);
+nextBtn.addEventListener('click', () => playNext());
+
+// ═══════════════════════════════════════════════════════
+//  AUTOPLAY GATE
+// ═══════════════════════════════════════════════════════
+startBtn.addEventListener('click', () => {
+  autoplayOverlay.classList.add('hidden');
+  // Try to unlock audio context
+  audioEl.play().catch(() => {});
+  audioEl.pause();
+});
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+loadSavedUrl();
+updateVolume(80);
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Build output
+dist/
+build/
+
+# yt-dlp binary (download lại khi deploy)
+yt-dlp.exe
+yt-dlp
+
+# Vercel
+.vercel/

@@ -1,0 +1,15 @@
+{
+  "name": "company-music-player",
+  "version": "1.0.0",
+  "description": "LotusQuant Internal Music Player",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "vercel": "37.5.3"
+  }
+}

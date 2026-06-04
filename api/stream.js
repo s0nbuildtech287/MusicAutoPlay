@@ -1,0 +1,72 @@
+const { spawn } = require('child_process');
+const path = require('path');
+
+// Validate YouTube video ID (11 alphanumeric chars + - _)
+function isValidVideoId(id) {
+  return /^[\w-]{11}$/.test(id);
+}
+
+module.exports = async (req, res) => {
+  const { id } = req.query;
+
+  if (!id || !isValidVideoId(id)) {
+    return res.status(400).json({ error: 'Invalid or missing video ID' });
+  }
+
+  const url = `https://www.youtube.com/watch?v=${id}`;
+  const ytdlpPath = path.join(__dirname, '..', 'yt-dlp.exe');
+
+  console.log(`[Stream] Fetching: ${url}`);
+
+  try {
+    // Spawn yt-dlp process
+    const ytdlp = spawn(ytdlpPath, [
+      '-f', 'bestaudio/best',
+      '--no-playlist',
+      '--no-warnings',
+      '--quiet',
+      '-o', '-',  // Output to stdout
+      url
+    ]);
+
+    res.setHeader('Content-Type', 'audio/webm');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Pipe stdout to response
+    ytdlp.stdout.pipe(res);
+
+    // Log errors
+    ytdlp.stderr.on('data', (data) => {
+      console.error(`[Stream] yt-dlp stderr: ${data}`);
+    });
+
+    ytdlp.on('error', (err) => {
+      console.error(`[Stream] Process error:`, err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to start yt-dlp', message: err.message });
+      }
+    });
+
+    ytdlp.on('close', (code) => {
+      if (code !== 0 && code !== null) {
+        console.error(`[Stream] yt-dlp exited with code ${code}`);
+        if (!res.headersSent) {
+          res.status(500).json({ error: `yt-dlp failed with code ${code}` });
+        }
+      }
+    });
+
+    req.on('close', () => {
+      console.log(`[Stream] Client disconnected: ${id}`);
+      ytdlp.kill();
+    });
+
+  } catch (err) {
+    console.error('[Stream] Fatal error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+};
