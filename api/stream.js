@@ -1,83 +1,10 @@
-const https = require('https');
-const http = require('http');
+const { spawn } = require('child_process');
+const path = require('path');
+const os = require('os');
 
 // Validate YouTube video ID (11 alphanumeric chars + - _)
 function isValidVideoId(id) {
   return /^[\w-]{11}$/.test(id);
-}
-
-// Fetch from Invidious instance
-function fetchInvidiousStream(id) {
-  return new Promise((resolve, reject) => {
-    // Try multiple Invidious instances
-    const instances = [
-      'invidious.snopyta.org',
-      'yewtu.be',
-      'inv.riverside.rocks'
-    ];
-    
-    const instance = instances[Math.floor(Math.random() * instances.length)];
-    const url = `https://${instance}/api/v1/videos/${id}`;
-    
-    console.log(`[Stream] Trying Invidious: ${instance}`);
-    
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.error) {
-            reject(new Error(json.error));
-            return;
-          }
-          
-          // Find best audio format
-          const audioFormats = json.adaptiveFormats.filter(f => f.type?.includes('audio'));
-          if (audioFormats.length === 0) {
-            reject(new Error('No audio format found'));
-            return;
-          }
-          
-          // Sort by bitrate, get highest
-          audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-          resolve(audioFormats[0].url);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', reject);
-  });
-}
-
-// Stream from URL
-function streamFromUrl(url, res) {
-  const client = url.startsWith('https') ? https : http;
-  
-  client.get(url, (audioRes) => {
-    if (audioRes.statusCode !== 200) {
-      throw new Error(`Failed to fetch audio: ${audioRes.statusCode}`);
-    }
-    
-    res.setHeader('Content-Type', audioRes.headers['content-type'] || 'audio/webm');
-    res.setHeader('Content-Length', audioRes.headers['content-length']);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    
-    audioRes.pipe(res);
-    
-    audioRes.on('error', (err) => {
-      console.error('[Stream] Audio stream error:', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Stream error' });
-      }
-    });
-  }).on('error', (err) => {
-    console.error('[Stream] Request error:', err.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: err.message });
-    }
-  });
 }
 
 module.exports = async (req, res) => {
@@ -87,20 +14,65 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Invalid or missing video ID' });
   }
 
-  console.log(`[Stream] Fetching: ${id}`);
+  const url = `https://www.youtube.com/watch?v=${id}`;
+  
+  // Use different binary based on OS
+  const isWindows = os.platform() === 'win32';
+  const ytdlpPath = path.join(__dirname, '..', isWindows ? 'yt-dlp.exe' : 'yt-dlp');
+
+  console.log(`[Stream] Fetching: ${url}`);
 
   try {
-    const streamUrl = await fetchInvidiousStream(id);
-    console.log(`[Stream] Got stream URL, proxying...`);
-    streamFromUrl(streamUrl, res);
+    // Spawn yt-dlp process
+    const ytdlp = spawn(ytdlpPath, [
+      '-f', 'bestaudio/best',
+      '--no-playlist',
+      '--no-warnings',
+      '--quiet',
+      '--no-check-certificates',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      '-o', '-',  // Output to stdout
+      url
+    ]);
+
+    res.setHeader('Content-Type', 'audio/webm');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Pipe stdout to response
+    ytdlp.stdout.pipe(res);
+
+    // Log errors
+    ytdlp.stderr.on('data', (data) => {
+      console.error(`[Stream] yt-dlp stderr: ${data}`);
+    });
+
+    ytdlp.on('error', (err) => {
+      console.error(`[Stream] Process error:`, err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to start yt-dlp', message: err.message });
+      }
+    });
+
+    ytdlp.on('close', (code) => {
+      if (code !== 0 && code !== null) {
+        console.error(`[Stream] yt-dlp exited with code ${code}`);
+        if (!res.headersSent) {
+          res.status(500).json({ error: `yt-dlp failed with code ${code}` });
+        }
+      }
+    });
+
+    req.on('close', () => {
+      console.log(`[Stream] Client disconnected: ${id}`);
+      ytdlp.kill();
+    });
+
   } catch (err) {
-    console.error('[Stream] Error:', err.message);
+    console.error('[Stream] Fatal error:', err.message);
     if (!res.headersSent) {
       res.status(500).json({ error: err.message });
     }
   }
-  
-  req.on('close', () => {
-    console.log(`[Stream] Client disconnected: ${id}`);
-  });
 };
