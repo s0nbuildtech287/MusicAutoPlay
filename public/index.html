@@ -944,6 +944,16 @@ function renderFilterChips() {
     filterChips.innerHTML = '<span class="no-members">Chưa có dữ liệu</span>';
     return;
   }
+  
+  // Add "Tổng hợp" chip first
+  const allActive = state.activeMembers.size === state.members.length;
+  const allChip = document.createElement('div');
+  allChip.className = 'chip' + (allActive ? ' active' : '');
+  allChip.innerHTML = `<span class="dot"></span>🎶 Tổng hợp`;
+  allChip.addEventListener('click', () => toggleAll(allChip));
+  filterChips.appendChild(allChip);
+  
+  // Add individual member chips
   state.members.forEach(m => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (state.activeMembers.has(m) ? ' active' : '');
@@ -953,14 +963,32 @@ function renderFilterChips() {
   });
 }
 
+function toggleAll(chipEl) {
+  if (state.activeMembers.size === state.members.length) {
+    // Currently all selected, do nothing (keep at least one)
+    toast('⚠️ Phải giữ ít nhất 1 người');
+    return;
+  } else {
+    // Select all
+    state.activeMembers = new Set(state.members);
+  }
+  
+  const curSong = state.playlist[state.currentIndex];
+  buildPlaylist(true);
+  if (curSong) {
+    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+    if (newIdx !== -1) state.currentIndex = newIdx;
+  }
+  renderFilterChips();
+  renderPlaylist();
+}
+
 function toggleMember(name, chipEl) {
   if (state.activeMembers.has(name)) {
     if (state.activeMembers.size === 1) { toast('⚠️ Phải giữ ít nhất 1 người'); return; }
     state.activeMembers.delete(name);
-    chipEl.classList.remove('active');
   } else {
     state.activeMembers.add(name);
-    chipEl.classList.add('active');
   }
   const curSong = state.playlist[state.currentIndex];
   buildPlaylist(true);
@@ -969,6 +997,7 @@ function toggleMember(name, chipEl) {
     const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
     if (newIdx !== -1) state.currentIndex = newIdx;
   }
+  renderFilterChips();
   renderPlaylist();
 }
 
