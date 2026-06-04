@@ -837,9 +837,6 @@ async function loadSheet() {
     buildPlaylist();
     toast(`✅ Đã load ${state.songs.length} bài của ${state.members.length} người`);
     checkResume();
-    
-    // Show shortened URL
-    shortenUrlDisplay();
   } catch (e) {
     console.error(e);
     toast(`❌ Lỗi load sheet: ${e.message}`);
@@ -1172,10 +1169,12 @@ volSlider.addEventListener('input', () => updateVolume(parseInt(volSlider.value)
 function saveProgress() {
   if (state.currentIndex === -1) return;
   const song = state.playlist[state.currentIndex];
+  // Save full URL, not shortened display
+  const fullUrl = sheetUrl.dataset.fullUrl || sheetUrl.value;
   localStorage.setItem('mcp_save', JSON.stringify({
     playlistIndex: state.currentIndex,
     currentTime:   audioEl.currentTime,
-    sheetUrl:      sheetUrl.value,
+    sheetUrl:      fullUrl,
     song:          song,
     savedAt:       new Date().toLocaleString('vi-VN'),
   }));
@@ -1189,7 +1188,9 @@ function checkResume() {
   if (!raw) return;
   try {
     const data = JSON.parse(raw);
-    if (!data.sheetUrl || data.sheetUrl !== sheetUrl.value) return;
+    // Compare with full URL stored in dataset
+    const currentUrl = sheetUrl.dataset.fullUrl || sheetUrl.value;
+    if (!data.sheetUrl || data.sheetUrl !== currentUrl) return;
     if (data.playlistIndex === undefined || !data.song) return;
 
     const song = data.song;
@@ -1213,7 +1214,18 @@ function checkResume() {
 
 function loadSavedUrl() {
   const saved = localStorage.getItem('mcp_sheetUrl');
-  if (saved) sheetUrl.value = saved;
+  const defaultUrl = 'https://docs.google.com/spreadsheets/d/1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM/edit?gid=0#gid=0';
+  
+  if (saved) {
+    sheetUrl.value = saved;
+  } else {
+    // Use default company sheet
+    sheetUrl.value = defaultUrl;
+    localStorage.setItem('mcp_sheetUrl', defaultUrl);
+  }
+  
+  // Auto-load sheet if saved URL exists
+  setTimeout(() => loadSheet(), 500);
 }
 
 saveUrlBtn.addEventListener('click', () => {
