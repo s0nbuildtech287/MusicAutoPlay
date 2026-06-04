@@ -8,4 +8,4 @@ services:
       - key: NODE_VERSION
         value: 18
       - key: COOKIES_URL
-        value: YOUR_GIST_RAW_URL_HERE
+        value: https://gist.githubusercontent.com/s0nbuildtech287/520be2a7674b4c0570d603cc622c4942/raw/9ebf18a6ed1e01e88aaa7e85f49a2f333ef51388/gistfile1.txt
