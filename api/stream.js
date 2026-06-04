@@ -15,6 +15,10 @@ async function ensureCookies() {
   
   // If cookies already exist, skip
   if (fs.existsSync(cookiesPath)) {
+    console.log('[Stream] Using existing cookies file');
+    // Read first few lines to verify format
+    const preview = fs.readFileSync(cookiesPath, 'utf8').split('\n').slice(0, 3).join('\n');
+    console.log('[Stream] Cookies preview:', preview.slice(0, 200) + '...');
     return cookiesPath;
   }
   
@@ -39,6 +43,17 @@ async function ensureCookies() {
       file.on('finish', () => {
         file.close();
         console.log('[Stream] Cookies downloaded successfully');
+        
+        // Verify cookies format
+        const content = fs.readFileSync(cookiesPath, 'utf8');
+        const lines = content.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+        console.log(`[Stream] Cookies file has ${lines.length} valid entries`);
+        
+        if (lines.length === 0) {
+          reject(new Error('Cookies file is empty or invalid'));
+          return;
+        }
+        
         resolve(cookiesPath);
       });
     }).on('error', reject);
