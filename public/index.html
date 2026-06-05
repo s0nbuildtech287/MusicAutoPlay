@@ -45,11 +45,17 @@
       align-items: center;
       gap: 10px;
       margin-bottom: 20px;
+      position: relative;
     }
     .app-header-logo {
       width: 80px;
       height: 80px;
       object-fit: contain;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    .app-header-logo:hover {
+      transform: scale(1.1);
     }
     .app-header h1 {
       font-size: 1.25rem;
@@ -66,6 +72,172 @@
       border: 1px solid var(--border);
       padding: 2px 8px;
       border-radius: 99px;
+    }
+    
+    /* Party Mode Button */
+    .party-btn {
+      margin-left: auto;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #ff6b6b, #feca57);
+      border: none;
+      border-radius: 99px;
+      color: white;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .party-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+    }
+    .party-btn.active {
+      animation: rainbow-border 3s linear infinite;
+    }
+    
+    @keyframes rainbow-border {
+      0% { background: linear-gradient(135deg, #ff6b6b, #feca57); }
+      25% { background: linear-gradient(135deg, #feca57, #48dbfb); }
+      50% { background: linear-gradient(135deg, #48dbfb, #ff9ff3); }
+      75% { background: linear-gradient(135deg, #ff9ff3, #54a0ff); }
+      100% { background: linear-gradient(135deg, #54a0ff, #ff6b6b); }
+    }
+    
+    /* Party Mode Effects */
+    body.party-mode {
+      animation: party-bg 5s ease infinite;
+    }
+    
+    @keyframes party-bg {
+      0%, 100% { background: #0f0f14; }
+      25% { background: #1a0f1a; }
+      50% { background: #0f1a1a; }
+      75% { background: #1a1a0f; }
+    }
+    
+    /* Confetti */
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: #f00;
+      position: fixed;
+      top: -10px;
+      z-index: 9999;
+      animation: confetti-fall 3s linear;
+      pointer-events: none;
+    }
+    
+    @keyframes confetti-fall {
+      to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+    
+    /* Boss Mode - Hidden */
+    body.boss-mode {
+      background: white;
+      color: black;
+    }
+    body.boss-mode .card,
+    body.boss-mode .app-header {
+      display: none;
+    }
+    body.boss-mode::after {
+      content: "Microsoft Excel\A\ASheet1\A\A A | B | C | D\A 1 | Revenue | 2024 | $50,000\A 2 | Cost | 2024 | $30,000\A 3 | Profit | 2024 | $20,000";
+      white-space: pre;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      padding: 50px;
+      display: block;
+    }
+    
+    /* Achievement Badge */
+    .achievement {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #ffd700, #ffed4e);
+      color: #000;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+      font-weight: 700;
+      font-size: 0.9rem;
+      z-index: 9999;
+      animation: achievement-slide 4s ease;
+      pointer-events: none;
+    }
+    
+    @keyframes achievement-slide {
+      0%, 100% { transform: translateX(400px); opacity: 0; }
+      10%, 90% { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* ─── Search Box ─── */
+    .search-box {
+      position: relative;
+      width: 100%;
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px 9px 38px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .clear-search {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 1rem;
+      display: none;
+      transition: color 0.2s;
+    }
+    .clear-search:hover {
+      color: var(--text);
+    }
+    .clear-search.visible {
+      display: block;
+    }
+    .search-results-info {
+      font-size: 0.75rem;
+      color: var(--accent2);
+      margin-top: 6px;
+      display: none;
+    }
+    .search-results-info.visible {
+      display: block;
+    }
+    .pl-item.search-highlight {
+      background: rgba(124, 106, 247, 0.08);
+      border-color: rgba(124, 106, 247, 0.2);
     }
 
     /* ─── Card ─── */
@@ -571,9 +743,10 @@
 
   <!-- App Header -->
   <div class="app-header">
-    <img src="/favicon.png" alt="Logo" class="app-header-logo" />
+    <img src="/favicon.png" alt="Logo" class="app-header-logo" id="logo" />
     <h1>Lotusquant Music Player</h1>
     <span class="badge">LotusQuant Internal</span>
+    <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
   </div>
 
   <!-- Sheet URL Card -->
@@ -667,7 +840,16 @@
         <span class="playlist-title">Playlist</span>
         <span class="playlist-count" id="playlistCount">0 bài</span>
       </div>
-      <div class="playlist-list" id="playlistList">
+      
+      <!-- Search Box -->
+      <div class="search-box" style="margin-top: 12px;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Tìm bài hát, ca sĩ, hoặc người..." />
+        <button class="clear-search" id="clearSearch">✕</button>
+      </div>
+      <div class="search-results-info" id="searchResultsInfo"></div>
+      
+      <div class="playlist-list" id="playlistList" style="margin-top: 12px;">
         <div class="empty-playlist">
           <div class="big">🎶</div>
           <p>Playlist trống — Load Sheet để bắt đầu</p>
@@ -889,6 +1071,12 @@ function buildPlaylist(keepCurrent = false) {
     // No members selected - clear playlist
     state.playlist = [];
     if (!keepCurrent) state.currentIndex = -1;
+    // Clear search when playlist changes
+    if (window.SearchFeature && window.SearchFeature.hasActiveSearch()) {
+      window.SearchFeature.clearSearch();
+    }
+    renderPlaylist();
+    renderNowPlaying();
     return;
   }
 
@@ -1035,33 +1223,65 @@ function renderNowPlaying() {
 }
 
 function renderPlaylist() {
-  const pl = state.playlist;
-  playlistCount.textContent = `${pl.length} bài`;
+  // Use SearchFeature to get filtered results if search is active
+  let pl = state.playlist;
+  const hasSearch = window.SearchFeature && window.SearchFeature.hasActiveSearch();
+  
+  if (hasSearch) {
+    const results = window.SearchFeature.getSearchResults();
+    if (results && results.length >= 0) {
+      pl = results;
+    }
+  }
+  
+  const totalCount = state.playlist.length;
+  
+  // Update count display
+  if (hasSearch) {
+    playlistCount.textContent = `${pl.length}/${totalCount} bài`;
+  } else {
+    playlistCount.textContent = `${pl.length} bài`;
+  }
 
   if (pl.length === 0) {
-    playlistList.innerHTML = `
-      <div class="empty-playlist">
-        <div class="big">🎶</div>
-        <p>Playlist trống</p>
-      </div>`;
+    if (hasSearch) {
+      playlistList.innerHTML = `
+        <div class="empty-playlist">
+          <div class="big">🔍</div>
+          <p>Không tìm thấy bài nào phù hợp</p>
+          <p style="font-size:0.75rem;margin-top:4px;color:var(--text-muted)">Thử từ khóa khác</p>
+        </div>`;
+    } else {
+      playlistList.innerHTML = `
+        <div class="empty-playlist">
+          <div class="big">🎶</div>
+          <p>Playlist trống</p>
+        </div>`;
+    }
     return;
   }
 
   playlistList.innerHTML = '';
   pl.forEach((song, i) => {
+    // Find original index in full playlist
+    const originalIndex = state.playlist.findIndex(s => s.vid === song.vid && s.plIndex === song.plIndex);
+    const isCurrentSong = originalIndex === state.currentIndex;
+    const isDone = originalIndex < state.currentIndex && originalIndex !== -1;
+    
     const item = document.createElement('div');
     item.className = 'pl-item' +
-      (i === state.currentIndex ? ' is-playing' : '') +
-      (i < state.currentIndex ? ' is-done' : '');
+      (isCurrentSong ? ' is-playing' : '') +
+      (isDone ? ' is-done' : '') +
+      (hasSearch ? ' search-highlight' : '');
     item.innerHTML = `
-      <span class="pl-num">${i === state.currentIndex ? '▶' : i+1}</span>
+      <span class="pl-num">${isCurrentSong ? '▶' : originalIndex+1}</span>
       <div class="pl-info">
         <div class="pl-name">${song.title}</div>
         <div class="pl-sub">${song.artist}</div>
       </div>
       <span class="pl-member-tag">${song.name}</span>
     `;
-    item.addEventListener('click', () => jumpTo(i));
+    item.addEventListener('click', () => jumpTo(originalIndex));
     playlistList.appendChild(item);
   });
 
@@ -1087,6 +1307,9 @@ function playSong(index) {
     renderNowPlaying();
     renderPlaylist();
     saveProgress();
+    
+    // Trigger songStarted event for fun features
+    window.dispatchEvent(new CustomEvent('songStarted', { detail: song }));
   }).catch(err => {
     console.warn('Autoplay blocked:', err);
   });
@@ -1282,6 +1505,18 @@ playPauseBtn.addEventListener('click', togglePlayPause);
 prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', () => playNext());
 
+// Search events - handled by search-feature.js, just listen for custom events
+window.addEventListener('searchChanged', (e) => {
+  if (window.SearchFeature) {
+    window.SearchFeature.performSearch(e.detail.query, state.playlist);
+    renderPlaylist();
+  }
+});
+
+window.addEventListener('searchCleared', () => {
+  renderPlaylist();
+});
+
 // ═══════════════════════════════════════════════════════
 //  AUTOPLAY GATE
 // ═══════════════════════════════════════════════════════
@@ -1298,5 +1533,11 @@ startBtn.addEventListener('click', () => {
 loadSavedUrl();
 updateVolume(80);
 </script>
+
+<!-- Search Feature -->
+<script src="/search-feature.js"></script>
+
+<!-- Fun Features -->
+<script src="/fun-features.js"></script>
 </body>
 </html>
