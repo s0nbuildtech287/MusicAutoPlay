@@ -29,13 +29,31 @@ function createWindow() {
       contextIsolation: true
     },
     autoHideMenuBar: true,
-    title: 'Company Music Player — LotusQuant'
+    title: 'Company Music Player — LotusQuant',
+    show: false // Don't show until ready
   });
 
   // Wait for server to start, then load
-  setTimeout(() => {
-    mainWindow.loadURL('http://localhost:7777');
-  }, 2000);
+  let retries = 0;
+  const maxRetries = 5;
+  
+  const tryLoad = () => {
+    mainWindow.loadURL('http://localhost:7777').catch(err => {
+      console.log(`Load attempt ${retries + 1} failed, retrying...`);
+      retries++;
+      if (retries < maxRetries) {
+        setTimeout(tryLoad, 1000);
+      } else {
+        console.error('Failed to load after', maxRetries, 'attempts');
+      }
+    });
+  };
+  
+  setTimeout(tryLoad, 2000);
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.show();
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -886,7 +886,9 @@ sheetUrl.addEventListener('blur', () => {
 function buildPlaylist(keepCurrent = false) {
   const active = state.members.filter(m => state.activeMembers.has(m));
   if (active.length === 0) {
-    toast('⚠️ Bạn đã bỏ chọn tất cả mọi người!');
+    // No members selected - clear playlist
+    state.playlist = [];
+    if (!keepCurrent) state.currentIndex = -1;
     return;
   }
 
@@ -972,23 +974,16 @@ function toggleAll(chipEl) {
     toast('✅ Đã chọn tất cả');
   }
   
-  // Only rebuild playlist if at least one member is selected
-  if (state.activeMembers.size > 0) {
-    const curSong = state.playlist[state.currentIndex];
-    buildPlaylist(true);
-    if (curSong) {
-      const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
-      if (newIdx !== -1) state.currentIndex = newIdx;
-    }
-  } else {
-    // No members selected - clear playlist
-    state.playlist = [];
-    state.currentIndex = -1;
-    renderPlaylist();
-    renderNowPlaying();
+  const curSong = state.playlist[state.currentIndex];
+  buildPlaylist(true);
+  if (curSong && state.playlist.length > 0) {
+    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+    if (newIdx !== -1) state.currentIndex = newIdx;
   }
   
   renderFilterChips();
+  renderPlaylist();
+  renderNowPlaying();
 }
 
 function toggleMember(name, chipEl, event) {
@@ -1001,23 +996,16 @@ function toggleMember(name, chipEl, event) {
     state.activeMembers.add(name);
   }
   
-  // Only rebuild playlist if at least one member is selected
-  if (state.activeMembers.size > 0) {
-    const curSong = state.playlist[state.currentIndex];
-    buildPlaylist(true);
-    if (curSong) {
-      const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
-      if (newIdx !== -1) state.currentIndex = newIdx;
-    }
-  } else {
-    // No members selected - clear playlist
-    state.playlist = [];
-    state.currentIndex = -1;
-    renderPlaylist();
-    renderNowPlaying();
+  const curSong = state.playlist[state.currentIndex];
+  buildPlaylist(true);
+  if (curSong && state.playlist.length > 0) {
+    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+    if (newIdx !== -1) state.currentIndex = newIdx;
   }
   
   renderFilterChips();
+  renderPlaylist();
+  renderNowPlaying();
 }
 
 function renderNowPlaying() {
