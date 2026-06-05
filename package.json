@@ -1,6 +1,6 @@
 {
   "name": "company-music-player",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "LotusQuant Internal Music Player",
   "author": "LotusQuant",
   "main": "electron-main.js",
