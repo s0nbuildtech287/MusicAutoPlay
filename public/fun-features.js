@@ -54,7 +54,7 @@ function togglePartyMode() {
     
     // Speed up spinning
     if (avatar) {
-      avatar.style.animation = 'spin-slow 2s linear infinite';
+      avatar.style.animation = 'spin-slow 4s linear infinite';
     }
     
     // Periodic confetti
@@ -77,7 +77,7 @@ function togglePartyMode() {
     }
     
     if (avatar) {
-      avatar.style.animation = 'spin-slow 8s linear infinite';
+      avatar.style.animation = 'spin-slow 12s linear infinite';
     }
     
     toast('Party Mode OFF');
