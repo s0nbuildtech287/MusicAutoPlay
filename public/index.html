@@ -955,47 +955,69 @@ function renderFilterChips() {
     const chip = document.createElement('div');
     chip.className = 'chip' + (state.activeMembers.has(m) ? ' active' : '');
     chip.innerHTML = `<span class="dot"></span>${m}`;
-    chip.addEventListener('click', () => toggleMember(m, chip));
+    chip.addEventListener('click', (e) => toggleMember(m, chip, e));
     filterChips.appendChild(chip);
   });
 }
 
 function toggleAll(chipEl) {
+  // If all selected, deselect all. Otherwise, select all
   if (state.activeMembers.size === state.members.length) {
-    // Currently all selected, do nothing (keep at least one)
-    toast('⚠️ Phải giữ ít nhất 1 người');
-    return;
+    // Currently all selected → Deselect all
+    state.activeMembers = new Set();
+    toast('⚪ Đã tắt tất cả - Click vào người để chọn');
   } else {
-    // Select all
+    // Not all selected → Select all
     state.activeMembers = new Set(state.members);
+    toast('✅ Đã chọn tất cả');
   }
   
-  const curSong = state.playlist[state.currentIndex];
-  buildPlaylist(true);
-  if (curSong) {
-    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
-    if (newIdx !== -1) state.currentIndex = newIdx;
+  // Only rebuild playlist if at least one member is selected
+  if (state.activeMembers.size > 0) {
+    const curSong = state.playlist[state.currentIndex];
+    buildPlaylist(true);
+    if (curSong) {
+      const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+      if (newIdx !== -1) state.currentIndex = newIdx;
+    }
+  } else {
+    // No members selected - clear playlist
+    state.playlist = [];
+    state.currentIndex = -1;
+    renderPlaylist();
+    renderNowPlaying();
   }
+  
   renderFilterChips();
-  renderPlaylist();
 }
 
-function toggleMember(name, chipEl) {
+function toggleMember(name, chipEl, event) {
+  // Simple toggle: Click to turn on/off
   if (state.activeMembers.has(name)) {
-    if (state.activeMembers.size === 1) { toast('⚠️ Phải giữ ít nhất 1 người'); return; }
+    // Turn off this member
     state.activeMembers.delete(name);
   } else {
+    // Turn on this member
     state.activeMembers.add(name);
   }
-  const curSong = state.playlist[state.currentIndex];
-  buildPlaylist(true);
-  // Try to keep current song in new playlist
-  if (curSong) {
-    const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
-    if (newIdx !== -1) state.currentIndex = newIdx;
+  
+  // Only rebuild playlist if at least one member is selected
+  if (state.activeMembers.size > 0) {
+    const curSong = state.playlist[state.currentIndex];
+    buildPlaylist(true);
+    if (curSong) {
+      const newIdx = state.playlist.findIndex(s => s.vid === curSong.vid);
+      if (newIdx !== -1) state.currentIndex = newIdx;
+    }
+  } else {
+    // No members selected - clear playlist
+    state.playlist = [];
+    state.currentIndex = -1;
+    renderPlaylist();
+    renderNowPlaying();
   }
+  
   renderFilterChips();
-  renderPlaylist();
 }
 
 function renderNowPlaying() {
