@@ -7,7 +7,8 @@
     "dev": "node server.js",
     "start": "electron .",
     "build": "electron-builder --win --x64",
-    "build:portable": "electron-builder --win portable"
+    "build:portable": "electron-builder --win portable",
+    "postinstall": "node download-ytdlp.js"
   },
   "build": {
     "appId": "com.lotusquant.musicplayer",

@@ -30,18 +30,13 @@ cd company-music-player
 npm install
 ```
 
-### 3. Tải yt-dlp
+### 3. Cài dependencies
 
-**Windows:**
-```powershell
-Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "yt-dlp.exe"
-```
-
-**macOS/Linux:**
 ```bash
-curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o yt-dlp
-chmod +x yt-dlp
+npm install
 ```
+
+`yt-dlp.exe` sẽ được tự động tải về.
 
 ### 4. Chạy app
 
