@@ -13,6 +13,7 @@
   "build": {
     "appId": "com.lotusquant.musicplayer",
     "productName": "Lotusquant Music",
+    "asar": false,
     "files": [
       "api/**/*",
       "public/**/*",
