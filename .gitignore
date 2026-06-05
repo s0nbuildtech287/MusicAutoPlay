@@ -24,8 +24,6 @@ desktop.ini
 # Build output
 dist/
 build/
-
-# yt-dlp binary (download khi deploy)
 yt-dlp.exe
 yt-dlp
 yt-dlp_linux

@@ -30,15 +30,9 @@ cd company-music-player
 npm install
 ```
 
-### 3. Cài dependencies
+`yt-dlp.exe` sẽ được tự động tải về qua postinstall script.
 
-```bash
-npm install
-```
-
-`yt-dlp.exe` sẽ được tự động tải về.
-
-### 4. Chạy app
+### 3. Chạy app
 
 **Cách 1: Desktop App (Khuyến nghị)**
 
