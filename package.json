@@ -7,12 +7,40 @@
   "scripts": {
     "dev": "node server.js",
     "start": "electron .",
-    "postinstall": "node download-ytdlp.js"
+    "postinstall": "node download-ytdlp.js",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.lotusquant.musicplayer",
+    "productName": "Lotusquant Music",
+    "files": [
+      "api/**/*",
+      "public/**/*",
+      "server.js",
+      "electron-main.js",
+      "download-ytdlp.js",
+      "yt-dlp.exe",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lotusquant Music"
+    }
   },
   "dependencies": {
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "electron": "^42.3.3"
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1"
   }
 }
