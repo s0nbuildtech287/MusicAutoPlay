@@ -16,6 +16,7 @@
     "files": [
       "api/**/*",
       "public/**/*",
+      "people/**/*",
       "server.js",
       "electron-main.js",
       "download-ytdlp.js",

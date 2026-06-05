@@ -8,6 +8,9 @@ const PORT = 7777;
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve people photos
+app.use('/people', express.static(path.join(__dirname, 'people')));
+
 // Route /api/stream → our handler
 app.get('/api/stream', streamHandler);
 

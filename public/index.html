@@ -243,12 +243,12 @@
       box-shadow: 0 0 32px rgba(124, 106, 247, 0.3);
       transition: all 0.4s;
       overflow: hidden;
-      padding: 12px;
+      padding: 0;
     }
     .np-avatar img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      object-fit: cover;
     }
     .np-avatar.spinning {
       animation: spin-slow 8s linear infinite;
@@ -1002,11 +1002,16 @@ function renderNowPlaying() {
   const song = state.playlist[state.currentIndex];
   if (!song) {
     npAvatar.classList.remove('spinning');
+    npAvatar.innerHTML = '<img src="/favicon.png" alt="Logo" />';
     npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
     progressArea.style.display = 'none';
     playPauseBtn.textContent = '▶';
     return;
   }
+
+  // Update avatar with member photo
+  const memberPhoto = `/people/${song.name}.jpg`;
+  npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png'" />`;
 
   npContent.innerHTML = `
     <p class="np-member">👤 ${song.name}</p>
