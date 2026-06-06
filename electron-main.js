@@ -27,13 +27,15 @@ function getLocalIp() {
       if (iface.family === 'IPv4' && !iface.internal) {
         let score = 0;
         
-        // Prefer Wi-Fi or Ethernet interfaces
-        if (/wi-fi|wifi|wlan|ethernet|eth|en\d+|lan|wireless/i.test(nameLower)) {
-          score += 50;
+        // Prefer Wi-Fi over Ethernet, but both are physical candidates
+        if (/wi-fi|wifi|wlan|wireless/i.test(nameLower)) {
+          score += 60;
+        } else if (/ethernet|eth|en\d+|lan/i.test(nameLower)) {
+          score += 40;
         }
         
-        // De-prioritize virtual interfaces
-        if (isVirtualOrVpn) {
+        // De-prioritize virtual interfaces or default VirtualBox host-only subnets
+        if (isVirtualOrVpn || iface.address.startsWith('192.168.56.')) {
           score -= 100;
         }
 
