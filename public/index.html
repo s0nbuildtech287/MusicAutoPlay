@@ -837,6 +837,15 @@
       0%, 100% { opacity: 0.22; transform: scale(1); }
       50%       { opacity: 0.38; transform: scale(1.12); }
     }
+
+    /* Order banner glow pulse */
+    #orderBannerCard {
+      animation: order-glow 2.8s ease-in-out infinite;
+    }
+    @keyframes order-glow {
+      0%, 100% { box-shadow: 0 0 18px rgba(251,146,60,0.25), inset 0 0 20px rgba(251,146,60,0.06); }
+      50%       { box-shadow: 0 0 28px rgba(251,146,60,0.45), inset 0 0 24px rgba(251,146,60,0.12); }
+    }
     .layout-btn {
       padding: 6px 10px;
       background: var(--surface2);
@@ -1308,12 +1317,12 @@
     <div class="col-right">
 
       <!-- Order Banner Card -->
-      <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.1); border-color: rgba(251, 146, 60, 0.3);">
+      <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.18); border-color: rgba(251, 146, 60, 0.7); box-shadow: 0 0 18px rgba(251, 146, 60, 0.25), inset 0 0 20px rgba(251, 146, 60, 0.06);">
         <div class="card-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;flex-wrap:wrap;">
-          <p style="font-size:0.85rem;color:var(--text);margin:0;">
-            📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fb923c;font-weight:600;text-decoration:none;">Đang tải...</a>
+          <p style="font-size:0.88rem;color:#fff;margin:0;font-weight:500;text-shadow:0 0 12px rgba(251,146,60,0.6);">
+            📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fed7aa;font-weight:700;text-decoration:none;text-shadow:0 0 14px rgba(251,146,60,0.9);">Đang tải...</a>
           </p>
-          <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251, 146, 60, 0.3);color:#fb923c;background:transparent;cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;">Sao chép Link</button>
+          <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251,146,60,0.6);color:#fb923c;background:rgba(251,146,60,0.1);cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;font-weight:700;">Sao chép Link</button>
         </div>
       </div>
 
