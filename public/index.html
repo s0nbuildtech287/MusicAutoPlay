@@ -72,6 +72,7 @@
     .app-header,
     .resume-banner,
     .card,
+    .main-layout,
     #toast-container {
       position: relative;
       z-index: 1;
@@ -80,7 +81,7 @@
     /* ─── Header ─── */
     .app-header {
       width: 100%;
-      max-width: 720px;
+      max-width: 1100px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -787,6 +788,87 @@
     .divider { height: 1px; background: var(--border); }
     .hidden { display: none !important; }
 
+    /* ─── Layout Toggle Button ─── */
+    .layout-btn {
+      padding: 6px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .layout-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+    .layout-btn.is-grid {
+      color: var(--accent2);
+      border-color: var(--accent);
+      background: rgba(124, 106, 247, 0.12);
+    }
+
+    /* ─── Two-column layout ─── */
+    .main-layout {
+      width: 100%;
+      max-width: 1100px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      grid-template-rows: auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .col-top {
+      grid-column: 1 / -1;
+    }
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: sticky;
+      top: 16px;
+    }
+    .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    /* Override max-width on cards inside the layout */
+    .main-layout .card {
+      max-width: 100%;
+    }
+
+    /* ─── Vertical (single-column) layout ─── */
+    .main-layout.layout-vertical {
+      max-width: 720px;
+      grid-template-columns: 1fr;
+    }
+    .main-layout.layout-vertical .col-top,
+    .main-layout.layout-vertical .col-left,
+    .main-layout.layout-vertical .col-right {
+      grid-column: 1;
+      position: static;
+    }
+    /* restore original card order in vertical mode via order property */
+    .main-layout.layout-vertical .col-top   { order: 1; }
+    .main-layout.layout-vertical .col-left  { order: 2; }
+    .main-layout.layout-vertical .col-right { order: 3; }
+
+    @media (max-width: 760px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+      .col-top {
+        grid-column: 1;
+      }
+      .col-left {
+        position: static;
+      }
+    }
+
     /* ─── Stats Button & Modal ─── */
     .stats-btn {
       padding: 6px 10px;
@@ -1046,7 +1128,7 @@
   </div>
 
   <!-- Resume Banner -->
-  <div class="resume-banner hidden" id="resumeBanner">
+  <div class="resume-banner hidden" id="resumeBanner" style="max-width:1100px;">
     <p>🕐 Hôm qua dừng ở <span id="resumeLabel">—</span> — Tiếp tục?</p>
     <div class="resume-actions">
       <button class="btn btn-primary" id="resumeYes">✅ Tiếp tục</button>
@@ -1060,149 +1142,163 @@
     <h1>Lotusquant Music Player</h1>
     <span class="badge">LotusQuant Internal</span>
     <div class="header-actions">
+      <button class="layout-btn" id="layoutBtn" title="Đổi bố cục">⊞ 2 cột</button>
       <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
       <button class="stats-btn" id="statsBtn">📊 Thống kê</button>
     </div>
   </div>
 
-  <!-- Sheet URL Card -->
-  <div class="card">
-    <div class="card-section">
-      <div class="sheet-row">
-        <input type="text" id="sheetUrl" placeholder="Dán Google Sheet URL hoặc CSV URL vào đây…" />
-        <button class="btn btn-primary" id="loadBtn">
-          <span id="loadBtnText">Load</span>
-        </button>
-        <button class="btn btn-ghost" id="saveUrlBtn" title="Lưu URL">💾</button>
-      </div>
-    </div>
+  <!-- ─── Main 2-column layout ─── -->
+  <div class="main-layout">
 
-    <!-- Mode + Filter -->
-    <div class="card-section">
-      <div class="controls-row">
+    <!-- TOP FULL WIDTH: Sheet + Mode + Filter -->
+    <div class="col-top">
+      <div class="card">
+        <div class="card-section">
+          <div class="sheet-row">
+            <input type="text" id="sheetUrl" placeholder="Dán Google Sheet URL hoặc CSV URL vào đây…" />
+            <button class="btn btn-primary" id="loadBtn">
+              <span id="loadBtnText">Load</span>
+            </button>
+            <button class="btn btn-ghost" id="saveUrlBtn" title="Lưu URL">💾</button>
+          </div>
+        </div>
+
         <!-- Mode -->
-        <div class="control-group">
-          <span class="label-sm">Chế độ</span>
-          <div class="mode-tabs">
-            <button class="mode-tab active" id="tabRoundRobin">Luân phiên</button>
-            <button class="mode-tab" id="tabBurst">Liên tục</button>
+        <div class="card-section">
+          <div class="controls-row">
+            <div class="control-group">
+              <span class="label-sm">Chế độ</span>
+              <div class="mode-tabs">
+                <button class="mode-tab active" id="tabRoundRobin">Luân phiên</button>
+                <button class="mode-tab" id="tabBurst">Liên tục</button>
+              </div>
+              <div id="burstConfig" class="hidden" style="display:flex;align-items:center;gap:6px;">
+                <select class="burst-select" id="burstN">
+                  <option value="2">2 bài</option>
+                  <option value="3" selected>3 bài</option>
+                  <option value="4">4 bài</option>
+                  <option value="5">5 bài</option>
+                </select>
+                <span style="font-size:0.75rem;color:var(--text-muted)">/người</span>
+              </div>
+            </div>
           </div>
-          <div id="burstConfig" class="hidden" style="display:flex;align-items:center;gap:6px;">
-            <select class="burst-select" id="burstN">
-              <option value="2">2 bài</option>
-              <option value="3" selected>3 bài</option>
-              <option value="4">4 bài</option>
-              <option value="5">5 bài</option>
-            </select>
-            <span style="font-size:0.75rem;color:var(--text-muted)">/người</span>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="card-section" id="filterSection">
+          <div class="controls-row">
+            <span class="label-sm">Filter</span>
+            <div class="filter-chips" id="filterChips">
+              <span class="no-members">Chưa có dữ liệu — hãy Load Sheet trước</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /col-top -->
 
-    <!-- Filter Chips -->
-    <div class="card-section" id="filterSection">
-      <div class="controls-row">
-        <span class="label-sm">Filter</span>
-        <div class="filter-chips" id="filterChips">
-          <span class="no-members">Chưa có dữ liệu — hãy Load Sheet trước</span>
+    <!-- LEFT COL: Player (sticky) -->
+    <div class="col-left">
+
+      <!-- Player Card -->
+      <div class="card">
+        <!-- Now Playing -->
+        <div class="card-section now-playing">
+          <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
+            <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
+            <div class="np-avatar" id="npAvatar">
+              <img src="/favicon.png" alt="Logo" />
+            </div>
+          </div>
+          <div id="npContent">
+            <p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>
+          </div>
+          <!-- Progress -->
+          <div class="progress-area" id="progressArea" style="display:none;width:100%;">
+            <div class="progress-times">
+              <span id="timeElapsed">0:00</span>
+              <span id="timeDuration">0:00</span>
+            </div>
+            <div class="progress-track" id="progressTrack">
+              <div class="progress-fill" id="progressFill"></div>
+              <div class="progress-thumb" id="progressThumb"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card-section">
+          <div class="player-controls">
+            <button class="ctrl-btn" id="prevBtn" title="Bài trước">⏮</button>
+            <button class="ctrl-btn play-pause" id="playPauseBtn" title="Play/Pause">▶</button>
+            <button class="ctrl-btn" id="nextBtn" title="Bài tiếp">⏭</button>
+          </div>
+          <div class="volume-row">
+            <span class="vol-icon" id="volIcon">🔊</span>
+            <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" />
+            <span style="font-size:0.75rem;color:var(--text-muted);width:32px;text-align:right" id="volLabel">80%</span>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Order Banner Card -->
-  <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.1); border-color: rgba(251, 146, 60, 0.3);">
-    <div class="card-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;flex-wrap:wrap;">
-      <p style="font-size:0.85rem;color:var(--text);margin:0;">
-        📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fb923c;font-weight:600;text-decoration:none;">Đang tải...</a>
-      </p>
-      <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251, 146, 60, 0.3);color:#fb923c;background:transparent;cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;">Sao chép Link</button>
-    </div>
-  </div>
+    </div><!-- /col-left -->
 
-  <!-- Player Card -->
-  <div class="card">
-    <!-- Now Playing -->
-    <div class="card-section now-playing">
-      <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
-        <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
-        <div class="np-avatar" id="npAvatar">
-          <img src="/favicon.png" alt="Logo" />
+    <!-- RIGHT COL: Order banner + Queue + Playlist -->
+    <div class="col-right">
+
+      <!-- Order Banner Card -->
+      <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.1); border-color: rgba(251, 146, 60, 0.3);">
+        <div class="card-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;flex-wrap:wrap;">
+          <p style="font-size:0.85rem;color:var(--text);margin:0;">
+            📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fb923c;font-weight:600;text-decoration:none;">Đang tải...</a>
+          </p>
+          <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251, 146, 60, 0.3);color:#fb923c;background:transparent;cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;">Sao chép Link</button>
         </div>
       </div>
-      <div id="npContent">
-        <p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>
-      </div>
-      <!-- Progress -->
-      <div class="progress-area" id="progressArea" style="display:none;width:100%;">
-        <div class="progress-times">
-          <span id="timeElapsed">0:00</span>
-          <span id="timeDuration">0:00</span>
-        </div>
-        <div class="progress-track" id="progressTrack">
-          <div class="progress-fill" id="progressFill"></div>
-          <div class="progress-thumb" id="progressThumb"></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Controls -->
-    <div class="card-section">
-      <div class="player-controls">
-        <button class="ctrl-btn" id="prevBtn" title="Bài trước">⏮</button>
-        <button class="ctrl-btn play-pause" id="playPauseBtn" title="Play/Pause">▶</button>
-        <button class="ctrl-btn" id="nextBtn" title="Bài tiếp">⏭</button>
-      </div>
-      <div class="volume-row">
-        <span class="vol-icon" id="volIcon">🔊</span>
-        <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" />
-        <span style="font-size:0.75rem;color:var(--text-muted);width:32px;text-align:right" id="volLabel">80%</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Order Queue Card -->
-  <div class="card" id="orderQueueCard">
-    <div class="card-section">
-      <div class="playlist-header">
-        <span class="playlist-title" style="color:#fb923c">📋 Hàng đợi Order (<span id="hostOrderCount">0</span>)</span>
-        <span class="playlist-count" style="color:var(--text-muted);font-size:0.75rem;">Bài order sẽ phát trước nhạc Google Sheet</span>
-      </div>
-      
-      <div class="playlist-list" id="hostOrderList" style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
-        <div class="empty-playlist">
-          <div class="big">📋</div>
-          <p>Hàng đợi order trống — đang phát nhạc từ Google Sheet</p>
+      <!-- Order Queue Card -->
+      <div class="card" id="orderQueueCard">
+        <div class="card-section">
+          <div class="playlist-header">
+            <span class="playlist-title" style="color:#fb923c">📋 Hàng đợi Order (<span id="hostOrderCount">0</span>)</span>
+            <span class="playlist-count" style="color:var(--text-muted);font-size:0.75rem;">Phát trước nhạc Sheet</span>
+          </div>
+          <div class="playlist-list" id="hostOrderList" style="margin-top: 12px; max-height: 220px; overflow-y: auto;">
+            <div class="empty-playlist">
+              <div class="big">📋</div>
+              <p>Hàng đợi order trống — đang phát nhạc từ Google Sheet</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Playlist Card -->
-  <div class="card">
-    <div class="card-section">
-      <div class="playlist-header">
-        <span class="playlist-title">Playlist</span>
-        <span class="playlist-count" id="playlistCount">0 bài</span>
-      </div>
-      
-      <!-- Search Box -->
-      <div class="search-box" style="margin-top: 12px;">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Tìm bài hát, ca sĩ, hoặc người..." />
-        <button class="clear-search" id="clearSearch">✕</button>
-      </div>
-      <div class="search-results-info" id="searchResultsInfo"></div>
-      
-      <div class="playlist-list" id="playlistList" style="margin-top: 12px;">
-        <div class="empty-playlist">
-          <div class="big">🎶</div>
-          <p>Playlist trống — Load Sheet để bắt đầu</p>
+      <!-- Playlist Card -->
+      <div class="card">
+        <div class="card-section">
+          <div class="playlist-header">
+            <span class="playlist-title">Playlist</span>
+            <span class="playlist-count" id="playlistCount">0 bài</span>
+          </div>
+          <!-- Search Box -->
+          <div class="search-box" style="margin-top: 12px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Tìm bài hát, ca sĩ, hoặc người..." />
+            <button class="clear-search" id="clearSearch">✕</button>
+          </div>
+          <div class="search-results-info" id="searchResultsInfo"></div>
+          <div class="playlist-list" id="playlistList" style="margin-top: 12px; max-height: 480px;">
+            <div class="empty-playlist">
+              <div class="big">🎶</div>
+              <p>Playlist trống — Load Sheet để bắt đầu</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+
+    </div><!-- /col-right -->
+
+  </div><!-- /main-layout -->
 
   <!-- Stats & Dashboard Modal -->
   <div class="modal-overlay" id="statsOverlay">
@@ -1313,6 +1409,33 @@ const resumeYes    = $('resumeYes');
 const resumeNo     = $('resumeNo');
 const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
+
+// ─── Layout Toggle ───────────────────────────────────────
+const layoutBtn  = $('layoutBtn');
+const mainLayout = document.querySelector('.main-layout');
+
+function applyLayout(mode) {
+  if (mode === 'vertical') {
+    mainLayout.classList.add('layout-vertical');
+    layoutBtn.textContent = '⊞ 2 cột';
+    layoutBtn.classList.remove('is-grid');
+  } else {
+    mainLayout.classList.remove('layout-vertical');
+    layoutBtn.textContent = '☰ Dọc';
+    layoutBtn.classList.add('is-grid');
+  }
+}
+
+// Load saved preference (default: grid)
+const savedLayout = localStorage.getItem('layoutMode') || 'grid';
+applyLayout(savedLayout);
+
+layoutBtn.addEventListener('click', () => {
+  const current = mainLayout.classList.contains('layout-vertical') ? 'vertical' : 'grid';
+  const next = current === 'grid' ? 'vertical' : 'grid';
+  localStorage.setItem('layoutMode', next);
+  applyLayout(next);
+});
 
 const visualizerCanvas = $('audioVisualizer');
 const visualizerCtx = visualizerCanvas ? visualizerCanvas.getContext('2d') : null;
