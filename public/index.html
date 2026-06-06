@@ -1477,6 +1477,13 @@ async function loadSheet() {
     state.members = [...new Set(state.songs.map(s => s.name).filter(Boolean))];
     state.activeMembers = new Set(state.members);
 
+    // Sync members with server for the order page dropdown
+    fetch('/api/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members: state.members })
+    }).catch(err => console.warn('Failed to sync members list:', err));
+
     renderFilterChips();
     buildPlaylist();
     toast(`✅ Đã load ${state.songs.length} bài của ${state.members.length} người`);

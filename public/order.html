@@ -105,7 +105,8 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .form-group input {
+    .form-group input,
+    .form-group select {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -116,7 +117,23 @@
       outline: none;
       transition: all 0.2s;
     }
-    .form-group input:focus {
+    .form-group select {
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+      padding-right: 40px;
+    }
+    .form-group select option {
+      background: #161622;
+      color: var(--text);
+    }
+    .form-group input:focus,
+    .form-group select:focus {
       border-color: var(--accent);
       box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
     }
@@ -269,7 +286,7 @@
     <div class="card">
       <div class="card-title">✍️ Gửi yêu cầu bài hát</div>
       <form id="orderForm">
-        <div class="form-group">
+        <div class="form-group" id="nameFieldContainer">
           <label for="nameInput">Tên của bạn</label>
           <input type="text" id="nameInput" placeholder="Nhập tên của bạn..." required maxlength="30">
         </div>
@@ -308,6 +325,101 @@
     if (localStorage.getItem('ordererName')) {
       nameInput.value = localStorage.getItem('ordererName');
     }
+
+    // Load members list and initialize name input/dropdown
+    async function initNameField() {
+      try {
+        const res = await fetch('/api/members');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.members && data.members.length > 0) {
+          const container = document.getElementById('nameFieldContainer');
+          
+          // Hide standard text input
+          nameInput.style.display = 'none';
+          nameInput.required = false;
+          
+          // Create select dropdown
+          const select = document.createElement('select');
+          select.id = 'nameSelect';
+          select.required = true;
+          
+          // Add default option
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.disabled = true;
+          defaultOpt.selected = true;
+          defaultOpt.textContent = '-- Chọn tên của bạn --';
+          select.appendChild(defaultOpt);
+          
+          // Add member options
+          data.members.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            select.appendChild(opt);
+          });
+          
+          // Add custom option
+          const customOpt = document.createElement('option');
+          customOpt.value = '__custom__';
+          customOpt.textContent = 'Khác (Tự nhập tên)...';
+          select.appendChild(customOpt);
+          
+          // Create custom text input
+          const customInput = document.createElement('input');
+          customInput.type = 'text';
+          customInput.id = 'nameCustomInput';
+          customInput.placeholder = 'Nhập tên của bạn...';
+          customInput.maxLength = 30;
+          customInput.style.marginTop = '8px';
+          customInput.style.display = 'none';
+          
+          // Append select and customInput
+          container.appendChild(select);
+          container.appendChild(customInput);
+          
+          // Event listeners to sync select/customInput with nameInput value
+          select.addEventListener('change', () => {
+            if (select.value === '__custom__') {
+              customInput.style.display = 'block';
+              customInput.required = true;
+              nameInput.value = customInput.value.trim();
+              customInput.focus();
+            } else {
+              customInput.style.display = 'none';
+              customInput.required = false;
+              nameInput.value = select.value;
+            }
+          });
+          
+          customInput.addEventListener('input', () => {
+            nameInput.value = customInput.value.trim();
+          });
+          
+          // Retrieve and apply saved name
+          const savedName = localStorage.getItem('ordererName');
+          if (savedName) {
+            const trimmedSaved = savedName.trim();
+            if (data.members.includes(trimmedSaved)) {
+              select.value = trimmedSaved;
+              nameInput.value = trimmedSaved;
+            } else {
+              select.value = '__custom__';
+              customInput.style.display = 'block';
+              customInput.required = true;
+              customInput.value = trimmedSaved;
+              nameInput.value = trimmedSaved;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load members list, fallback to text input:', err);
+      }
+    }
+    
+    initNameField();
 
     // Toast function
     function showToast(msg, type = 'success') {

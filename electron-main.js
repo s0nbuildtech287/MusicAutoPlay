@@ -67,6 +67,7 @@ function getLocalIp() {
 let orderQueue = [];
 let currentPlayingUser = null;
 let consecutiveCount = 0;
+let membersList = [];
 
 // Start Express server inside Electron
 function startServer() {
@@ -126,6 +127,21 @@ function startServer() {
         res.status(500).json({ error: err.message });
       }
     }
+  });
+
+  // API to sync members list (from Google Sheet loaded in host player)
+  expressApp.post('/api/members', (req, res) => {
+    const { members } = req.body;
+    if (Array.isArray(members)) {
+      membersList = members.map(m => m.trim()).filter(Boolean);
+      console.log(`[Queue] Updated members list from host: ${membersList.length} members`);
+    }
+    res.json({ success: true });
+  });
+
+  // API to get members list (for order page dropdown)
+  expressApp.get('/api/members', (req, res) => {
+    res.json({ members: membersList });
   });
 
   // API to get local IP
