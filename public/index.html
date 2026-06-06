@@ -2885,10 +2885,13 @@ function checkResume() {
   if (!raw) return;
   try {
     const data = JSON.parse(raw);
-    // Compare with full URL stored in dataset
     const currentUrl = sheetUrl.dataset.fullUrl || sheetUrl.value;
     if (!data.sheetUrl || data.sheetUrl !== currentUrl) return;
-    if (data.playlistIndex === undefined || !data.song) return;
+    if (!data.song || !data.song.vid) return;
+
+    // Tìm lại index theo vid thay vì dùng index đã lưu (playlist có thể rebuild khác thứ tự)
+    const foundIndex = state.playlist.findIndex(s => s.vid === data.song.vid);
+    if (foundIndex === -1) return; // bài không còn trong playlist
 
     const song = data.song;
     const t = fmtTime(data.currentTime);
@@ -2897,7 +2900,7 @@ function checkResume() {
 
     resumeYes.onclick = () => {
       resumeBanner.classList.add('hidden');
-      state.currentIndex = data.playlistIndex;
+      state.currentIndex = foundIndex;
       playSong(state.currentIndex);
       setTimeout(() => { audioEl.currentTime = data.currentTime; }, 800);
     };
