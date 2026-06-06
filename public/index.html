@@ -926,6 +926,60 @@
       }
     }
 
+    /* ─── Wave Color Picker ─── */
+    .wave-color-btn {
+      padding: 6px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .wave-color-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    .wave-color-popup {
+      position: fixed;
+      background: rgba(18, 18, 28, 0.96);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 232px;
+      z-index: 9999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px);
+    }
+    .wave-color-popup.hidden { display: none; }
+    .wave-color-swatch {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .wave-color-swatch:hover { transform: scale(1.15); }
+    .wave-color-swatch.active { border-color: #fff; transform: scale(1.1); }
+    .wave-color-swatch .swatch-label {
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
     /* ─── Stats Button & Modal ─── */
     .stats-btn {
       padding: 6px 10px;
@@ -1212,6 +1266,7 @@
     <span class="badge">LotusQuant Internal</span>
     <div class="header-actions">
       <button class="layout-btn" id="layoutBtn" title="Đổi bố cục">⊞ 2 cột</button>
+      <button class="wave-color-btn" id="waveColorBtn">🎨 <span id="waveColorName">Mặc định</span></button>
       <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
       <button class="stats-btn" id="statsBtn">📊 Thống kê</button>
     </div>
@@ -1418,6 +1473,9 @@
     </div>
   </div>
 
+  <!-- Wave Color Popup -->
+  <div class="wave-color-popup hidden" id="waveColorPopup"></div>
+
   <!-- Toast Container -->
   <div id="toast-container"></div>
 
@@ -1505,6 +1563,167 @@ layoutBtn.addEventListener('click', () => {
   localStorage.setItem('layoutMode', next);
   applyLayout(next);
 });
+
+// ─── Wave Color Themes ────────────────────────────────────
+const WAVE_THEMES = [
+  {
+    id: 'default', name: 'Mặc định', preview: 'linear-gradient(135deg,#581c87,#1d4ed8,#06b6d4,#ec4899,#d946ef,#8b5cf6)',
+    stops: [
+      [0,    'rgba(88,28,135,0.6)'],
+      [0.18, 'rgba(37,99,235,0.85)'],
+      [0.35, 'rgba(6,182,212,0.9)'],
+      [0.5,  'rgba(236,72,153,0.95)'],
+      [0.65, 'rgba(217,70,239,0.85)'],
+      [0.82, 'rgba(139,92,246,0.85)'],
+      [1,    'rgba(88,28,135,0.6)'],
+    ],
+    glow1: '139,92,246', glow2: '236,72,153', line: '236,72,153',
+  },
+  {
+    id: 'fire', name: 'Lửa', preview: 'linear-gradient(135deg,#7f1d1d,#dc2626,#f97316,#fde68a)',
+    stops: [
+      [0,    'rgba(127,29,29,0.6)'],
+      [0.25, 'rgba(220,38,38,0.9)'],
+      [0.5,  'rgba(249,115,22,0.95)'],
+      [0.75, 'rgba(253,186,116,0.85)'],
+      [1,    'rgba(127,29,29,0.6)'],
+    ],
+    glow1: '249,115,22', glow2: '220,38,38', line: '249,115,22',
+  },
+  {
+    id: 'ocean', name: 'Đại dương', preview: 'linear-gradient(135deg,#0c4a6e,#0891b2,#22d3ee,#67e8f9)',
+    stops: [
+      [0,    'rgba(12,74,110,0.6)'],
+      [0.25, 'rgba(8,145,178,0.9)'],
+      [0.5,  'rgba(34,211,238,0.95)'],
+      [0.75, 'rgba(103,232,249,0.85)'],
+      [1,    'rgba(12,74,110,0.6)'],
+    ],
+    glow1: '34,211,238', glow2: '8,145,178', line: '6,182,212',
+  },
+  {
+    id: 'forest', name: 'Rừng xanh', preview: 'linear-gradient(135deg,#14532d,#16a34a,#4ade80,#bbf7d0)',
+    stops: [
+      [0,    'rgba(20,83,45,0.6)'],
+      [0.25, 'rgba(22,163,74,0.9)'],
+      [0.5,  'rgba(74,222,128,0.95)'],
+      [0.75, 'rgba(187,247,208,0.8)'],
+      [1,    'rgba(20,83,45,0.6)'],
+    ],
+    glow1: '74,222,128', glow2: '22,163,74', line: '34,197,94',
+  },
+  {
+    id: 'sunset', name: 'Hoàng hôn', preview: 'linear-gradient(135deg,#7c2d12,#ea580c,#f59e0b,#fcd34d)',
+    stops: [
+      [0,    'rgba(124,45,18,0.6)'],
+      [0.25, 'rgba(234,88,12,0.9)'],
+      [0.5,  'rgba(245,158,11,0.95)'],
+      [0.75, 'rgba(252,211,77,0.85)'],
+      [1,    'rgba(124,45,18,0.6)'],
+    ],
+    glow1: '245,158,11', glow2: '234,88,12', line: '251,146,60',
+  },
+  {
+    id: 'neon', name: 'Neon', preview: 'linear-gradient(135deg,#ff00ff,#00ffff,#ff00ff)',
+    stops: [
+      [0,    'rgba(255,0,255,0.7)'],
+      [0.25, 'rgba(0,255,255,0.9)'],
+      [0.5,  'rgba(255,0,128,0.95)'],
+      [0.75, 'rgba(0,255,200,0.9)'],
+      [1,    'rgba(255,0,255,0.7)'],
+    ],
+    glow1: '0,255,255', glow2: '255,0,255', line: '0,255,200',
+  },
+  {
+    id: 'rose', name: 'Hồng', preview: 'linear-gradient(135deg,#881337,#e11d48,#fb7185,#fecdd3)',
+    stops: [
+      [0,    'rgba(136,19,55,0.6)'],
+      [0.25, 'rgba(225,29,72,0.9)'],
+      [0.5,  'rgba(251,113,133,0.95)'],
+      [0.75, 'rgba(254,205,211,0.8)'],
+      [1,    'rgba(136,19,55,0.6)'],
+    ],
+    glow1: '251,113,133', glow2: '225,29,72', line: '244,63,94',
+  },
+  {
+    id: 'gold', name: 'Vàng', preview: 'linear-gradient(135deg,#78350f,#d97706,#fbbf24,#fef3c7)',
+    stops: [
+      [0,    'rgba(120,53,15,0.6)'],
+      [0.25, 'rgba(217,119,6,0.9)'],
+      [0.5,  'rgba(251,191,36,0.95)'],
+      [0.75, 'rgba(254,243,199,0.8)'],
+      [1,    'rgba(120,53,15,0.6)'],
+    ],
+    glow1: '251,191,36', glow2: '217,119,6', line: '245,158,11',
+  },
+  {
+    id: 'ice', name: 'Băng', preview: 'linear-gradient(135deg,#1e3a5f,#60a5fa,#bfdbfe,#e0f2fe)',
+    stops: [
+      [0,    'rgba(30,58,95,0.6)'],
+      [0.25, 'rgba(96,165,250,0.9)'],
+      [0.5,  'rgba(191,219,254,0.9)'],
+      [0.75, 'rgba(224,242,254,0.8)'],
+      [1,    'rgba(30,58,95,0.6)'],
+    ],
+    glow1: '147,197,253', glow2: '96,165,250', line: '96,165,250',
+  },
+  {
+    id: 'galaxy', name: 'Galaxy', preview: 'linear-gradient(135deg,#1a0533,#7c3aed,#06b6d4,#ec4899,#7c3aed)',
+    stops: [
+      [0,    'rgba(26,5,51,0.7)'],
+      [0.2,  'rgba(124,58,237,0.9)'],
+      [0.4,  'rgba(6,182,212,0.95)'],
+      [0.6,  'rgba(236,72,153,0.95)'],
+      [0.8,  'rgba(124,58,237,0.9)'],
+      [1,    'rgba(26,5,51,0.7)'],
+    ],
+    glow1: '124,58,237', glow2: '6,182,212', line: '167,139,250',
+  },
+];
+
+let currentWaveTheme = WAVE_THEMES.find(t => t.id === (localStorage.getItem('waveTheme') || 'default')) || WAVE_THEMES[0];
+
+// Build popup swatches
+const waveColorPopup = $('waveColorPopup');
+const waveColorBtn   = $('waveColorBtn');
+const waveColorName  = $('waveColorName');
+
+function buildSwatches() {
+  waveColorPopup.innerHTML = '';
+  WAVE_THEMES.forEach(theme => {
+    const sw = document.createElement('div');
+    sw.className = 'wave-color-swatch' + (theme.id === currentWaveTheme.id ? ' active' : '');
+    sw.style.background = theme.preview;
+    sw.title = theme.name;
+    const lbl = document.createElement('span');
+    lbl.className = 'swatch-label';
+    lbl.textContent = theme.name;
+    sw.appendChild(lbl);
+    sw.addEventListener('click', () => {
+      currentWaveTheme = theme;
+      localStorage.setItem('waveTheme', theme.id);
+      waveColorName.textContent = theme.name;
+      waveColorPopup.querySelectorAll('.wave-color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      waveColorPopup.classList.add('hidden');
+    });
+    waveColorPopup.appendChild(sw);
+  });
+}
+buildSwatches();
+waveColorName.textContent = currentWaveTheme.name;
+
+// Toggle popup
+waveColorBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  waveColorPopup.classList.toggle('hidden');
+  if (!waveColorPopup.classList.contains('hidden')) {
+    const rect = waveColorBtn.getBoundingClientRect();
+    waveColorPopup.style.top  = (rect.bottom + 8) + 'px';
+    waveColorPopup.style.left = Math.min(rect.left, window.innerWidth - 248) + 'px';
+  }
+});
+document.addEventListener('click', () => waveColorPopup.classList.add('hidden'));
 
 const visualizerCanvas = $('audioVisualizer');
 const visualizerCtx = visualizerCanvas ? visualizerCanvas.getContext('2d') : null;
@@ -1834,8 +2053,8 @@ function drawVisualizer() {
     width / 2, centerY, 5 * dpr,
     width / 2, centerY, glowRadius
   );
-  radialGlow.addColorStop(0, `rgba(139, 92, 246, ${0.15 + pulseFactor * 0.10})`); // purple
-  radialGlow.addColorStop(0.4, `rgba(236, 72, 153, ${0.05 + pulseFactor * 0.05})`); // pink
+  radialGlow.addColorStop(0, `rgba(${currentWaveTheme.glow1}, ${0.15 + pulseFactor * 0.10})`);
+  radialGlow.addColorStop(0.4, `rgba(${currentWaveTheme.glow2}, ${0.05 + pulseFactor * 0.05})`);
   radialGlow.addColorStop(1, 'rgba(15, 15, 20, 0)');
   
   visualizerCtx.fillStyle = radialGlow;
@@ -1848,15 +2067,9 @@ function drawVisualizer() {
   const numBars = Math.floor(width / step);
   const maxHeight = height * 0.36;
 
-  // Create horizontal linear gradient across the visualizer width with higher opacity
+  // Create horizontal linear gradient from current wave theme
   const grad = visualizerCtx.createLinearGradient(0, 0, width, 0);
-  grad.addColorStop(0, 'rgba(88, 28, 135, 0.6)');      // Deep violet
-  grad.addColorStop(0.18, 'rgba(37, 99, 235, 0.85)');   // Royal Blue
-  grad.addColorStop(0.35, 'rgba(6, 182, 212, 0.9)');    // Electric Cyan
-  grad.addColorStop(0.5, 'rgba(236, 72, 153, 0.95)');   // Hot Pink
-  grad.addColorStop(0.65, 'rgba(217, 70, 239, 0.85)');  // Fuchsia
-  grad.addColorStop(0.82, 'rgba(139, 92, 246, 0.85)');  // Purple
-  grad.addColorStop(1, 'rgba(88, 28, 135, 0.6)');      // Deep violet
+  currentWaveTheme.stops.forEach(([pos, color]) => grad.addColorStop(pos, color));
 
   visualizerCtx.save();
   visualizerCtx.lineCap = 'round';
@@ -1918,7 +2131,7 @@ function drawVisualizer() {
   visualizerCtx.moveTo(0, centerY);
   visualizerCtx.lineTo(width, centerY);
   visualizerCtx.lineWidth = 6 * dpr;
-  visualizerCtx.strokeStyle = 'rgba(236, 72, 153, 0.35)'; // pink outer glow
+  visualizerCtx.strokeStyle = `rgba(${currentWaveTheme.line}, 0.35)`; // outer glow line
   visualizerCtx.stroke();
 
   // Draw inner glow line
