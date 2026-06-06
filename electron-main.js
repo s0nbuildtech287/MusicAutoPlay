@@ -40,6 +40,7 @@ function startServer() {
         '-f', 'bestaudio/best',
         '--no-playlist',
         '--quiet',
+        '--js-runtimes', 'node',
         '-o', '-',
         url
       ];
