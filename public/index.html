@@ -12,19 +12,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f0f14;
-      --surface:   #1a1a24;
-      --surface2:  #22222f;
-      --border:    #2e2e40;
-      --accent:    #7c6af7;
-      --accent2:   #a78bfa;
-      --text:      #e8e8f0;
-      --text-muted:#8888aa;
-      --playing:   #7c6af7;
-      --done:      #4ade80;
-      --radius:    12px;
-      --radius-sm: 8px;
+      --bg:        #08080c;
+      --surface:   rgba(22, 22, 34, 0.65);
+      --surface2:  rgba(32, 32, 48, 0.82);
+      --border:    rgba(255, 255, 255, 0.08);
+      --accent:    #8b5cf6;
+      --accent2:   #c084fc;
+      --text:      #f3f4f6;
+      --text-muted:#9ca3af;
+      --playing:   #a78bfa;
+      --done:      #34d399;
+      --radius:    16px;
+      --radius-sm: 10px;
     }
+
 
     body {
       background:
@@ -288,6 +289,9 @@
       border-radius: var(--radius);
       overflow: hidden;
       margin-bottom: 12px;
+      backdrop-filter: blur(16px) saturate(120%);
+      -webkit-backdrop-filter: blur(16px) saturate(120%);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     }
     .card-section {
       padding: 16px 20px;
@@ -1022,104 +1026,159 @@ function drawVisualizer() {
   const height = visualizerCanvas.height;
   const dpr = visualizerDpr || 1;
   const now = performance.now();
-  const playing = state.isPlaying;
+  const playing = state.isPlaying && !audioEl.paused;
 
+  // Clear canvas
   visualizerCtx.clearRect(0, 0, width, height);
 
-  const background = visualizerCtx.createLinearGradient(0, 0, 0, height);
-  background.addColorStop(0, 'rgba(117, 24, 240, 0.16)');
-  background.addColorStop(0.45, 'rgba(15, 15, 20, 0.00)');
-  background.addColorStop(1, 'rgba(236, 72, 153, 0.08)');
-  visualizerCtx.fillStyle = background;
+  // Initialize smoothed heights if not done
+  if (!window.smoothedHeights || window.smoothedHeights.length !== 256) {
+    window.smoothedHeights = new Array(256).fill(0);
+  }
+
+  // Update heights based on music state
+  if (playing && visualizerAnalyser) {
+    visualizerAnalyser.getByteFrequencyData(visualizerData);
+    for (let i = 0; i < 256; i++) {
+      // Map index to the active frequency bins (lower 70% contain the most visible beats)
+      const binIndex = Math.floor((i / 256) * visualizerAnalyser.frequencyBinCount * 0.75);
+      const target = visualizerData[binIndex] || 0;
+      // Linear interpolation for smoothing (lerp)
+      window.smoothedHeights[i] = window.smoothedHeights[i] * 0.78 + target * 0.22;
+    }
+  } else {
+    // Idle ripple wave flowing outward from the center
+    for (let i = 0; i < 256; i++) {
+      const distanceFromCenter = Math.abs(i - 128) / 128;
+      // Moving wave traveling outwards
+      const wave = Math.sin(now * 0.0018 - distanceFromCenter * 6) * 0.5 + 0.5;
+      // Taper off at the edges
+      const envelope = Math.cos(distanceFromCenter * Math.PI / 2);
+      const target = wave * 22 * envelope;
+      window.smoothedHeights[i] = window.smoothedHeights[i] * 0.85 + target * 0.15;
+    }
+  }
+
+  // Calculate overall volume pulse for ambient glow
+  let sum = 0;
+  for (let i = 0; i < 256; i++) {
+    sum += window.smoothedHeights[i];
+  }
+  const average = sum / 256;
+  const pulseFactor = average / 255; // 0 to 1
+
+  const centerY = height * 0.56;
+  
+  // 1. Draw dynamic ambient background radial glow
+  const glowRadius = Math.max(width * 0.28, width * (0.28 + pulseFactor * 0.28));
+  const radialGlow = visualizerCtx.createRadialGradient(
+    width / 2, centerY, 5 * dpr,
+    width / 2, centerY, glowRadius
+  );
+  radialGlow.addColorStop(0, `rgba(139, 92, 246, ${0.25 + pulseFactor * 0.15})`); // purple
+  radialGlow.addColorStop(0.4, `rgba(236, 72, 153, ${0.09 + pulseFactor * 0.08})`); // pink
+  radialGlow.addColorStop(1, 'rgba(15, 15, 20, 0)');
+  
+  visualizerCtx.fillStyle = radialGlow;
   visualizerCtx.fillRect(0, 0, width, height);
 
-  const points = Math.max(96, Math.min(180, Math.floor(width / (8 * dpr))));
-  const centerY = height * 0.56;
-  const centerX = width * 0.5;
-  const baseHeight = Math.max(92 * dpr, height * (playing ? 0.26 : 0.18));
-  const waveWidth = Math.max(width * 0.48, width * 0.82);
-  const amplitude = Math.max(34 * dpr, height * (playing ? 0.13 : 0.09));
-  const sparkLine = visualizerCtx.createLinearGradient(0, centerY - amplitude, width, centerY + amplitude);
-  sparkLine.addColorStop(0, 'rgba(188, 132, 255, 0.18)');
-  sparkLine.addColorStop(0.42, 'rgba(255, 129, 214, 0.98)');
-  sparkLine.addColorStop(0.72, 'rgba(236, 72, 153, 1)');
-  sparkLine.addColorStop(1, 'rgba(255, 205, 238, 1)');
+  // 2. Draw vertical bars
+  // We determine bar width and spacing based on screen width and DPI
+  const barWidth = 3.2 * dpr;
+  const barGap = 3.8 * dpr;
+  const step = barWidth + barGap;
+  const numBars = Math.floor(width / step);
+  const maxHeight = height * 0.36;
+
+  // Create horizontal linear gradient across the visualizer width
+  const grad = visualizerCtx.createLinearGradient(0, 0, width, 0);
+  grad.addColorStop(0, '#581c87');      // Deep violet
+  grad.addColorStop(0.18, '#2563eb');   // Royal Blue
+  grad.addColorStop(0.35, '#06b6d4');   // Electric Cyan
+  grad.addColorStop(0.5, '#ec4899');    // Hot Pink
+  grad.addColorStop(0.65, '#d946ef');   // Fuchsia
+  grad.addColorStop(0.82, '#8b5cf6');   // Purple
+  grad.addColorStop(1, '#581c87');      // Deep violet
 
   visualizerCtx.save();
-  visualizerCtx.globalCompositeOperation = 'lighter';
-  visualizerCtx.shadowBlur = 24 * dpr;
-  visualizerCtx.shadowColor = 'rgba(236, 72, 153, 0.72)';
+  visualizerCtx.lineCap = 'round';
+  visualizerCtx.strokeStyle = grad;
 
-  const fill = visualizerCtx.createLinearGradient(0, centerY - amplitude, 0, centerY + amplitude);
-  fill.addColorStop(0, 'rgba(255, 255, 255, 0.04)');
-  fill.addColorStop(0.18, 'rgba(188, 132, 255, 0.20)');
-  fill.addColorStop(0.5, 'rgba(255, 129, 214, 0.36)');
-  fill.addColorStop(0.82, 'rgba(236, 72, 153, 0.20)');
-  fill.addColorStop(1, 'rgba(255, 255, 255, 0.03)');
-
-  const wave = [];
-  const envelope = [];
-  for (let i = 0; i <= points; i++) {
-    const t = i / points;
-    const x = (width - waveWidth) * 0.5 + t * waveWidth;
-    const base =
-      Math.sin(now * 0.0012 + t * 8.5) * 0.55 +
-      Math.sin(now * 0.0018 - t * 14.0) * 0.28 +
-      Math.sin(now * 0.0035 + t * 24.0) * 0.16;
-    const drift = playing ? 1 : 0.7;
-    const y = centerY + base * amplitude * drift;
-    const band = Math.max(4 * dpr, amplitude * (0.16 + Math.abs(base) * 0.74));
-    wave.push({ x, y, band });
-    envelope.push({ x, yTop: y - band, yBottom: y + band });
-  }
-
+  // Layer 1: Wide soft glow
   visualizerCtx.beginPath();
-  visualizerCtx.moveTo(wave[0].x, wave[0].y);
-  for (let i = 1; i < wave.length - 1; i++) {
-    const p0 = wave[i - 1];
-    const p1 = wave[i];
-    const p2 = wave[i + 1];
-    const cx = (p1.x + p2.x) / 2;
-    const cy = (p1.y + p2.y) / 2;
-    visualizerCtx.quadraticCurveTo(p1.x, p1.y, cx, cy);
-  }
-
-  for (let i = wave.length - 1; i >= 1; i--) {
-    const p1 = envelope[i];
-    const p0 = envelope[i - 1];
-    const cx = (p1.x + p0.x) / 2;
-    const cy = (p1.yBottom + p0.yBottom) / 2;
-    visualizerCtx.lineTo(cx, cy);
-  }
-  visualizerCtx.closePath();
-  visualizerCtx.fillStyle = fill;
-  visualizerCtx.fill();
-
-  visualizerCtx.shadowBlur = 18 * dpr;
-  visualizerCtx.shadowColor = 'rgba(255, 129, 214, 0.85)';
-  visualizerCtx.lineWidth = 2.2 * dpr;
-  visualizerCtx.strokeStyle = sparkLine;
-  visualizerCtx.beginPath();
-  visualizerCtx.moveTo(wave[0].x, wave[0].y);
-  for (let i = 1; i < wave.length; i++) {
-    const prev = wave[i - 1];
-    const cur = wave[i];
-    const cx = (prev.x + cur.x) / 2;
-    const cy = (prev.y + cur.y) / 2;
-    visualizerCtx.quadraticCurveTo(prev.x, prev.y, cx, cy);
+  visualizerCtx.lineWidth = barWidth * 3.5;
+  visualizerCtx.globalAlpha = 0.15;
+  for (let i = 0; i < numBars; i++) {
+    const x = i * step + barWidth / 2;
+    const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
+    const smoothedIndex = Math.floor(distanceFromCenter * 255);
+    const rawHeight = window.smoothedHeights[smoothedIndex];
+    // Map to physical height
+    const barHeight = Math.max(1.5 * dpr, (rawHeight / 255) * maxHeight);
+    
+    visualizerCtx.moveTo(x, centerY - barHeight);
+    visualizerCtx.lineTo(x, centerY + barHeight);
   }
   visualizerCtx.stroke();
 
-  visualizerCtx.globalAlpha = 0.22;
-  visualizerCtx.lineWidth = 1.1 * dpr;
-  visualizerCtx.strokeStyle = 'rgba(255, 200, 240, 0.22)';
+  // Layer 2: Medium glow
+  visualizerCtx.beginPath();
+  visualizerCtx.lineWidth = barWidth * 2.0;
+  visualizerCtx.globalAlpha = 0.42;
+  for (let i = 0; i < numBars; i++) {
+    const x = i * step + barWidth / 2;
+    const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
+    const smoothedIndex = Math.floor(distanceFromCenter * 255);
+    const rawHeight = window.smoothedHeights[smoothedIndex];
+    const barHeight = Math.max(1.5 * dpr, (rawHeight / 255) * maxHeight);
+    
+    visualizerCtx.moveTo(x, centerY - barHeight);
+    visualizerCtx.lineTo(x, centerY + barHeight);
+  }
+  visualizerCtx.stroke();
+
+  // Layer 3: Solid core
+  visualizerCtx.beginPath();
+  visualizerCtx.lineWidth = barWidth;
+  visualizerCtx.globalAlpha = 1.0;
+  for (let i = 0; i < numBars; i++) {
+    const x = i * step + barWidth / 2;
+    const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
+    const smoothedIndex = Math.floor(distanceFromCenter * 255);
+    const rawHeight = window.smoothedHeights[smoothedIndex];
+    const barHeight = Math.max(1.5 * dpr, (rawHeight / 255) * maxHeight);
+    
+    visualizerCtx.moveTo(x, centerY - barHeight);
+    visualizerCtx.lineTo(x, centerY + barHeight);
+  }
+  visualizerCtx.stroke();
+
+  visualizerCtx.restore();
+
+  // 3. Draw horizontal glowing white line
+  // Draw outer glow line
   visualizerCtx.beginPath();
   visualizerCtx.moveTo(0, centerY);
   visualizerCtx.lineTo(width, centerY);
+  visualizerCtx.lineWidth = 6 * dpr;
+  visualizerCtx.strokeStyle = 'rgba(236, 72, 153, 0.35)'; // pink outer glow
   visualizerCtx.stroke();
-  visualizerCtx.globalAlpha = 1;
 
-  visualizerCtx.restore();
+  // Draw inner glow line
+  visualizerCtx.beginPath();
+  visualizerCtx.moveTo(0, centerY);
+  visualizerCtx.lineTo(width, centerY);
+  visualizerCtx.lineWidth = 3 * dpr;
+  visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // soft white glow
+  visualizerCtx.stroke();
+
+  // Draw core white line
+  visualizerCtx.beginPath();
+  visualizerCtx.moveTo(0, centerY);
+  visualizerCtx.lineTo(width, centerY);
+  visualizerCtx.lineWidth = 1.2 * dpr;
+  visualizerCtx.strokeStyle = '#ffffff';
+  visualizerCtx.stroke();
 
   visualizerRaf = requestAnimationFrame(drawVisualizer);
 }
