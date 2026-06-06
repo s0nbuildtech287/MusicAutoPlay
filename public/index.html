@@ -788,7 +788,55 @@
     .divider { height: 1px; background: var(--border); }
     .hidden { display: none !important; }
 
-    /* ─── Layout Toggle Button ─── */
+    /* ─── Corner Decorations ─── */
+    .corner-decoration {
+      position: fixed;
+      width: 180px;
+      height: 180px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .corner-decoration.top-left     { top: 0;    left: 0; }
+    .corner-decoration.top-right    { top: 0;    right: 0; }
+    .corner-decoration.bottom-left  { bottom: 0; left: 0; }
+    .corner-decoration.bottom-right { bottom: 0; right: 0; }
+
+    /* Ambient glow blobs */
+    .corner-glow {
+      position: fixed;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(72px);
+      opacity: 0.28;
+      animation: corner-pulse 5s ease-in-out infinite;
+    }
+    .corner-glow.top-left {
+      top: -100px; left: -100px;
+      background: radial-gradient(circle, #8b5cf6, transparent 70%);
+      animation-delay: 0s;
+    }
+    .corner-glow.top-right {
+      top: -100px; right: -100px;
+      background: radial-gradient(circle, #ec4899, transparent 70%);
+      animation-delay: 1.2s;
+    }
+    .corner-glow.bottom-left {
+      bottom: -100px; left: -100px;
+      background: radial-gradient(circle, #06b6d4, transparent 70%);
+      animation-delay: 2.4s;
+    }
+    .corner-glow.bottom-right {
+      bottom: -100px; right: -100px;
+      background: radial-gradient(circle, #a78bfa, transparent 70%);
+      animation-delay: 0.8s;
+    }
+    @keyframes corner-pulse {
+      0%, 100% { opacity: 0.22; transform: scale(1); }
+      50%       { opacity: 0.38; transform: scale(1.12); }
+    }
     .layout-btn {
       padding: 6px 10px;
       background: var(--surface2);
@@ -1116,6 +1164,18 @@
 <body>
 
   <canvas id="audioVisualizer" class="audio-visualizer" aria-hidden="true"></canvas>
+
+  <!-- Corner ambient glows -->
+  <div class="corner-glow top-left"></div>
+  <div class="corner-glow top-right"></div>
+  <div class="corner-glow bottom-left"></div>
+  <div class="corner-glow bottom-right"></div>
+
+  <!-- Corner EQ canvases -->
+  <canvas id="cornerEQ-tl" class="corner-decoration top-left"    aria-hidden="true"></canvas>
+  <canvas id="cornerEQ-tr" class="corner-decoration top-right"   aria-hidden="true"></canvas>
+  <canvas id="cornerEQ-bl" class="corner-decoration bottom-left" aria-hidden="true"></canvas>
+  <canvas id="cornerEQ-br" class="corner-decoration bottom-right"aria-hidden="true"></canvas>
 
   <!-- Autoplay Gate -->
   <div class="autoplay-overlay" id="autoplayOverlay">
@@ -1450,6 +1510,196 @@ let visualizerDpr = 1;
 
 let avEl = null;
 
+// ─── Corner EQ setup ─────────────────────────────────────
+const cornerCanvases = {
+  tl: document.getElementById('cornerEQ-tl'),
+  tr: document.getElementById('cornerEQ-tr'),
+  bl: document.getElementById('cornerEQ-bl'),
+  br: document.getElementById('cornerEQ-br'),
+};
+const cornerCtxs = {};
+const CORNER_SIZE = 180;
+const CORNER_DPR  = Math.min(window.devicePixelRatio || 1, 2);
+
+(function initCornerCanvases() {
+  Object.entries(cornerCanvases).forEach(([key, canvas]) => {
+    if (!canvas) return;
+    canvas.width  = CORNER_SIZE * CORNER_DPR;
+    canvas.height = CORNER_SIZE * CORNER_DPR;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(CORNER_DPR, CORNER_DPR);
+    cornerCtxs[key] = ctx;
+  });
+})();
+
+// ─── Floating Music Notes (particle field) ───────────────
+const NOTE_SYMBOLS = ['♩', '♪', '♫', '♬'];
+const NOTE_COUNT   = 50;
+const notes = [];
+
+function createNote(forceRandom = false) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const dir = Math.random() < 0.5 ? 1 : -1; // 1 = rơi xuống, -1 = bay lên
+  return {
+    x:       Math.random() * vw,
+    y:       forceRandom ? Math.random() * vh : (dir === 1 ? -20 : vh + 20),
+    symbol:  NOTE_SYMBOLS[Math.floor(Math.random() * NOTE_SYMBOLS.length)],
+    size:    11 + Math.random() * 16,
+    speed:   0.25 + Math.random() * 0.5,
+    dir:     dir,
+    drift:   (Math.random() - 0.5) * 0.35,
+    alpha:   0,
+    alphaTarget: 0.12 + Math.random() * 0.22,
+    phase:   'fadein',
+    holdFor: 180 + Math.random() * 240,
+    holdTimer: 0,
+    rotation: (Math.random() - 0.5) * 0.4,
+    rotSpeed: (Math.random() - 0.5) * 0.004,
+  };
+}
+
+// Pre-populate with notes scattered across screen
+for (let i = 0; i < NOTE_COUNT; i++) {
+  notes.push(createNote(true));
+}
+
+function drawMusicNotes(playing) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const ctx = visualizerCtx;
+  if (!ctx) return;
+
+  ctx.save();
+  ctx.font = `{size}px serif`;
+
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i];
+
+    // Update position — dir: 1 rơi xuống, -1 bay lên
+    n.y       += n.dir * n.speed * (playing ? 1.5 : 0.7);
+    n.x       += n.drift;
+    n.rotation += n.rotSpeed;
+
+    // Alpha state machine
+    if (n.phase === 'fadein') {
+      n.alpha += 0.008;
+      if (n.alpha >= n.alphaTarget) {
+        n.alpha = n.alphaTarget;
+        n.phase = 'hold';
+        n.holdTimer = 0;
+      }
+    } else if (n.phase === 'hold') {
+      n.holdTimer++;
+      if (n.holdTimer >= n.holdFor) n.phase = 'fadeout';
+    } else {
+      n.alpha -= 0.006;
+      if (n.alpha <= 0) n.alpha = 0;
+    }
+
+    // Recycle khi ra ngoài màn hoặc fade xong
+    const offScreen = n.dir === 1 ? n.y > vh + 30 : n.y < -30;
+    if (offScreen || n.x < -40 || n.x > vw + 40 ||
+        (n.phase === 'fadeout' && n.alpha <= 0)) {
+      notes[i] = createNote(false);
+      continue;
+    }
+
+    // Draw
+    ctx.save();
+    ctx.globalAlpha = n.alpha;
+    ctx.font        = `${n.size}px serif`;
+    ctx.fillStyle   = '#ffffff';
+    ctx.translate(n.x, n.y);
+    ctx.rotate(n.rotation);
+    ctx.fillText(n.symbol, 0, 0);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// corner config: origin corner, angle range for arc of bars
+const CORNER_CFG = {
+  tl: { ox: 0,           oy: 0,           startAngle: 0,         endAngle: Math.PI / 2,   binStart: 0,   binEnd: 40  },
+  tr: { ox: CORNER_SIZE, oy: 0,           startAngle: Math.PI/2, endAngle: Math.PI,        binStart: 40,  binEnd: 80  },
+  bl: { ox: 0,           oy: CORNER_SIZE, startAngle: -Math.PI/2,endAngle: 0,              binStart: 80,  binEnd: 120 },
+  br: { ox: CORNER_SIZE, oy: CORNER_SIZE, startAngle: Math.PI,   endAngle: Math.PI*1.5,   binStart: 120, binEnd: 160 },
+};
+
+const CORNER_COLORS = {
+  tl: ['#8b5cf6', '#c084fc'],
+  tr: ['#ec4899', '#f9a8d4'],
+  bl: ['#06b6d4', '#67e8f9'],
+  br: ['#a78bfa', '#e879f9'],
+};
+
+function drawCornerEQ(now, playing) {
+  const NUM_BARS   = 18;
+  const BAR_MIN    = 4;
+  const BAR_MAX    = 52;
+  const BAR_W_DEG  = 2.2; // bar visual width in degrees
+
+  Object.entries(CORNER_CFG).forEach(([key, cfg]) => {
+    const ctx = cornerCtxs[key];
+    if (!ctx) return;
+    ctx.clearRect(0, 0, CORNER_SIZE, CORNER_SIZE);
+
+    const [c1, c2] = CORNER_COLORS[key];
+    const angleSpan = cfg.endAngle - cfg.startAngle;
+
+    for (let i = 0; i < NUM_BARS; i++) {
+      const t = i / (NUM_BARS - 1);
+      const angle = cfg.startAngle + t * angleSpan;
+
+      // pick freq data
+      let rawH = 0;
+      if (playing && window.smoothedHeights) {
+        const bin = Math.floor(cfg.binStart + t * (cfg.binEnd - cfg.binStart));
+        rawH = window.smoothedHeights[Math.min(bin, 255)] || 0;
+      } else {
+        // gentle idle wave
+        rawH = (Math.sin(now * 0.0012 + t * 4 + cfg.startAngle) * 0.5 + 0.5) * 28;
+      }
+
+      const barLen = BAR_MIN + (rawH / 255) * (BAR_MAX - BAR_MIN);
+      const innerR = 18;
+
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+
+      const x1 = cfg.ox + cosA * innerR;
+      const y1 = cfg.oy + sinA * innerR;
+      const x2 = cfg.ox + cosA * (innerR + barLen);
+      const y2 = cfg.oy + sinA * (innerR + barLen);
+
+      // glow layer
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.lineWidth = BAR_W_DEG * 3.5;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = c1;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // core layer
+      ctx.globalAlpha = 0.75 + (rawH / 255) * 0.25;
+      ctx.lineWidth = BAR_W_DEG;
+      const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, c1);
+      grad.addColorStop(1, c2);
+      ctx.strokeStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
 function resizeVisualizer() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   visualizerDpr = dpr;
@@ -1677,6 +1927,12 @@ function drawVisualizer() {
   visualizerCtx.lineWidth = 1.2 * dpr;
   visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
   visualizerCtx.stroke();
+
+  // Draw floating music notes
+  drawMusicNotes(playing);
+
+  // Draw corner EQ decorations
+  drawCornerEQ(now, playing);
 
   visualizerRaf = requestAnimationFrame(drawVisualizer);
 }
