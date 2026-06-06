@@ -164,10 +164,10 @@ function startServer() {
 
   // API to submit an order
   expressApp.post('/api/order', (req, res) => {
-    if (!orderEnabled) {
+    const { name, url, adminBypass } = req.body;
+    if (!orderEnabled && !adminBypass) {
       return res.status(403).json({ error: 'Order nhạc hiện đang tắt — chờ admin mở nhé! 🎵' });
     }
-    const { name, url } = req.body;
     if (!name || !url) {
       return res.status(400).json({ error: 'Vui lòng nhập tên và đường dẫn bài hát!' });
     }

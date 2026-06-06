@@ -1444,7 +1444,10 @@
         <div class="card-section">
           <div class="playlist-header">
             <span class="playlist-title" style="color:#fb923c">📋 Hàng đợi Order (<span id="hostOrderCount">0</span>)</span>
-            <span class="playlist-count" style="color:var(--text-muted);font-size:0.75rem;">Phát trước nhạc Sheet</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="playlist-count" style="color:var(--text-muted);font-size:0.75rem;">Phát trước nhạc Sheet</span>
+              <button id="adminAddOrderBtn" title="Thêm bài vào hàng đợi" style="width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(251,146,60,0.5);background:rgba(251,146,60,0.1);color:#fb923c;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;line-height:1;flex-shrink:0;">+</button>
+            </div>
           </div>
           <div class="playlist-list" id="hostOrderList" style="margin-top: 12px; max-height: 220px; overflow-y: auto;">
             <div class="empty-playlist">
@@ -1526,6 +1529,35 @@
       <div class="stats-footer">
         <button class="btn btn-ghost" id="resetStatsBtn" style="color:#ef4444;border-color:rgba(239,68,68,0.2)">
           🗑️ Đặt lại thống kê
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Add Order Popup -->
+  <div class="modal-overlay hidden" id="adminAddOrderOverlay">
+    <div class="stats-modal" style="max-width:400px;gap:16px;">
+      <div class="stats-header">
+        <h2 style="font-size:1.1rem;">➕ Thêm bài vào hàng đợi</h2>
+        <button class="close-modal-btn" id="adminAddOrderClose">&times;</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Tên người order</label>
+          <select id="adminOrderName"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:0.88rem;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22rgba(255,255,255,0.5)%22 stroke-width=%222%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19 9l-7 7-7-7%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px;">
+            <option value="" disabled selected>-- Chọn tên --</option>
+          </select>
+          <input id="adminOrderNameCustom" type="text" placeholder="Nhập tên..." maxlength="30"
+            style="display:none;width:100%;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:0.88rem;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Link YouTube</label>
+          <input id="adminOrderUrl" type="url" placeholder="https://youtube.com/watch?v=..."
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:0.88rem;outline:none;">
+        </div>
+        <button id="adminOrderSubmit" class="btn btn-primary" style="margin-top:4px;">
+          <span id="adminOrderSubmitText">➕ Thêm vào hàng đợi</span>
         </button>
       </div>
     </div>
@@ -3188,8 +3220,110 @@ function escapeHTML(str) {
   });
 })();
 
-// ═══════════════════════════════════════════════════════
-//  MUSIC STATISTICS & DASHBOARD LOGIC
+// ─── Admin Add Order ──────────────────────────────────────
+(function initAdminAddOrder() {
+  const overlay    = $('adminAddOrderOverlay');
+  const closeBtn   = $('adminAddOrderClose');
+  const addBtn     = $('adminAddOrderBtn');
+  const submitBtn  = $('adminOrderSubmit');
+  const submitText = $('adminOrderSubmitText');
+  const nameInput  = $('adminOrderName');
+  const nameCustom = $('adminOrderNameCustom');
+  const urlInput   = $('adminOrderUrl');
+  if (!overlay || !addBtn) return;
+
+  // Show/hide custom input khi chọn "Khác"
+  nameInput.addEventListener('change', () => {
+    if (nameInput.value === '__custom__') {
+      nameCustom.style.display = 'block';
+      nameCustom.focus();
+    } else {
+      nameCustom.style.display = 'none';
+    }
+  });
+
+  function getSelectedName() {
+    if (nameInput.value === '__custom__') return nameCustom.value.trim();
+    return nameInput.value;
+  }
+
+  function openPopup() {
+    // Populate member dropdown từ state.members
+    nameInput.innerHTML = '<option value="" disabled selected>-- Chọn tên --</option>';
+    (state.members || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      opt.style.background = '#161622';
+      nameInput.appendChild(opt);
+    });
+    const customOpt = document.createElement('option');
+    customOpt.value = '__custom__';
+    customOpt.textContent = 'Khác (tự nhập)...';
+    customOpt.style.background = '#161622';
+    nameInput.appendChild(customOpt);
+
+    overlay.classList.remove('hidden');
+    overlay.classList.add('active');
+    nameInput.focus();
+  }
+
+  function closePopup() {
+    overlay.classList.remove('active');
+    overlay.classList.add('hidden');
+    nameInput.value  = '';
+    nameCustom.value = '';
+    nameCustom.style.display = 'none';
+    urlInput.value   = '';
+    submitText.textContent = '➕ Thêm vào hàng đợi';
+    submitBtn.disabled = false;
+  }
+
+  addBtn.addEventListener('click', openPopup);
+  closeBtn.addEventListener('click', closePopup);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closePopup(); });
+
+  [nameCustom, urlInput].forEach(inp => {
+    inp.addEventListener('focus', () => inp.style.borderColor = 'var(--accent)');
+    inp.addEventListener('blur',  () => inp.style.borderColor = 'var(--border)');
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    const name = getSelectedName();
+    const url  = urlInput.value.trim();
+    if (!name) { nameInput.focus(); toast('⚠️ Chọn tên người order'); return; }
+    if (!url)  { urlInput.focus();  toast('⚠️ Nhập link YouTube');    return; }
+
+    submitBtn.disabled = true;
+    submitText.textContent = 'Đang thêm...';
+
+    try {
+      const res = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, adminBypass: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`✅ Đã thêm bài của ${name}`);
+        closePopup();
+        // Refresh host order list
+        if (typeof fetchAndRenderHostOrders === 'function') fetchAndRenderHostOrders();
+      } else {
+        toast('⚠️ ' + (data.error || 'Lỗi thêm bài'), 'error');
+        submitBtn.disabled = false;
+        submitText.textContent = '➕ Thêm vào hàng đợi';
+      }
+    } catch {
+      toast('⚠️ Không thể kết nối server');
+      submitBtn.disabled = false;
+      submitText.textContent = '➕ Thêm vào hàng đợi';
+    }
+  });
+
+  // Submit on Enter in url field
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitBtn.click(); });
+})();
 // ═══════════════════════════════════════════════════════
 function recordPlayHistory(song, isOrder) {
   if (!song) return;
