@@ -1242,42 +1242,65 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
   const maxBarLength = 38; // Maximum bar length extending outwards
   const numBars = 64; // Number of radiating bars
 
-  // 1. Draw radiating spectrum bars
-  circularCtx.save();
-  circularCtx.lineCap = 'round';
-  
+  // 1. Draw radiating spectrum bars as a matrix of sparkling square blocks (Double Pass for Glow + Core)
+  const blockSize = 2.4;
+  const blockGap = 1.6;
+  const step = blockSize + blockGap;
+  const maxBlocks = Math.floor(maxBarLength / step);
+
+  // Pass 1: Glow layer (wider blocks, low opacity)
   for (let i = 0; i < numBars; i++) {
-    const angle = (i / numBars) * Math.PI * 2 - Math.PI / 2; // start from top
-    
-    // Mirror the frequency data symmetrically
+    const angle = (i / numBars) * Math.PI * 2 - Math.PI / 2;
     const half = numBars / 2;
     const index = i < half ? i : numBars - i;
-    // Map index to frequency bins
     const binIndex = Math.floor((index / half) * 255 * 0.7);
     const rawHeight = window.smoothedHeights[binIndex] || 0;
     
-    const barLength = Math.max(1.5, (rawHeight / 255) * maxBarLength);
+    circularCtx.save();
+    circularCtx.translate(cx, cy);
+    circularCtx.rotate(angle);
     
-    const x0 = cx + Math.cos(angle) * innerRadius;
-    const y0 = cy + Math.sin(angle) * innerRadius;
-    const x1 = cx + Math.cos(angle) * (innerRadius + barLength);
-    const y1 = cy + Math.sin(angle) * (innerRadius + barLength);
-
-    // Color gradient based on angle: Magenta/Pink
-    const hue = 310 + (index / half) * 45; // 310 (pink) to 355 (magenta/red-pink)
-    circularCtx.strokeStyle = `hsla(${hue}, 100%, 65%, 0.9)`;
-    circularCtx.lineWidth = 2.4;
-
-    // Fast glow
-    circularCtx.shadowBlur = 6;
-    circularCtx.shadowColor = `hsla(${hue}, 100%, 65%, 0.6)`;
+    const activeBlocks = Math.ceil((rawHeight / 255) * maxBlocks);
+    const hue = 310 + (index / half) * 45; // Pink/Magenta gradient
     
-    circularCtx.beginPath();
-    circularCtx.moveTo(x0, y0);
-    circularCtx.lineTo(x1, y1);
-    circularCtx.stroke();
+    for (let j = 0; j < activeBlocks; j++) {
+      const x = innerRadius + j * step;
+      // Twinkle formula based on time (now), angle index (i), and radial index (j)
+      const twinkle = 0.7 + Math.sin(now * 0.012 + i * 0.45 + j * 0.85) * 0.22 + (Math.random() - 0.5) * 0.06;
+      const opacity = Math.min(1, Math.max(0.1, twinkle * 0.28));
+      
+      circularCtx.fillStyle = `hsla(${hue}, 100%, 65%, ${opacity})`;
+      const glowSize = blockSize * 2.2;
+      circularCtx.fillRect(x - (glowSize - blockSize)/2, -glowSize / 2, glowSize, glowSize);
+    }
+    circularCtx.restore();
   }
-  circularCtx.restore();
+
+  // Pass 2: Core layer (sharp blocks, normal opacity)
+  for (let i = 0; i < numBars; i++) {
+    const angle = (i / numBars) * Math.PI * 2 - Math.PI / 2;
+    const half = numBars / 2;
+    const index = i < half ? i : numBars - i;
+    const binIndex = Math.floor((index / half) * 255 * 0.7);
+    const rawHeight = window.smoothedHeights[binIndex] || 0;
+    
+    circularCtx.save();
+    circularCtx.translate(cx, cy);
+    circularCtx.rotate(angle);
+    
+    const activeBlocks = Math.ceil((rawHeight / 255) * maxBlocks);
+    const hue = 310 + (index / half) * 45;
+    
+    for (let j = 0; j < activeBlocks; j++) {
+      const x = innerRadius + j * step;
+      const twinkle = 0.75 + Math.sin(now * 0.012 + i * 0.45 + j * 0.85) * 0.22 + (Math.random() - 0.5) * 0.06;
+      const opacity = Math.min(1, Math.max(0.35, twinkle));
+      
+      circularCtx.fillStyle = `hsla(${hue}, 100%, 65%, ${opacity})`;
+      circularCtx.fillRect(x, -blockSize / 2, blockSize, blockSize);
+    }
+    circularCtx.restore();
+  }
 
   // 2. Draw outer wavy neon ring connecting the peaks (mechanical wave)
   circularCtx.save();
