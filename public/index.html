@@ -1460,21 +1460,27 @@ async function loadSheet() {
     const start = isNaN(parseInt(rows[0]?.[0])) ? 1 : 0;
 
     state.songs = [];
+    const allScannedNames = [];
     for (let i = start; i < rows.length; i++) {
       const [stt, name, title, artist, url] = rows[i];
+      const trimmedName = (name || '').trim();
+      if (trimmedName) {
+        allScannedNames.push(trimmedName);
+      }
+      
       if (!url || !url.includes('http')) continue;
       const vid = extractVideoId(url);
       if (!vid) continue;
-      state.songs.push({ stt: stt || i, name: (name||'').trim(), title: (title||'').trim(), artist: (artist||'').trim(), url, vid });
+      state.songs.push({ stt: stt || i, name: trimmedName, title: (title||'').trim(), artist: (artist||'').trim(), url, vid });
     }
 
-    if (state.songs.length === 0) {
-      toast('❌ Không tìm thấy bài hát nào trong Sheet');
+    if (allScannedNames.length === 0) {
+      toast('❌ Không tìm thấy thành viên nào trong Sheet');
       return;
     }
 
     // Extract unique members (preserving order)
-    state.members = [...new Set(state.songs.map(s => s.name).filter(Boolean))];
+    state.members = [...new Set(allScannedNames)];
     state.activeMembers = new Set(state.members);
 
     // Sync members with server for the order page dropdown
