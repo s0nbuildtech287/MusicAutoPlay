@@ -857,6 +857,16 @@
     </div>
   </div>
 
+  <!-- Order Banner Card -->
+  <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.1); border-color: rgba(251, 146, 60, 0.3);">
+    <div class="card-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;flex-wrap:wrap;">
+      <p style="font-size:0.85rem;color:var(--text);margin:0;">
+        📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fb923c;font-weight:600;text-decoration:none;">Đang tải...</a>
+      </p>
+      <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251, 146, 60, 0.3);color:#fb923c;background:transparent;cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;">Sao chép Link</button>
+    </div>
+  </div>
+
   <!-- Player Card -->
   <div class="card">
     <!-- Now Playing -->
@@ -894,6 +904,23 @@
         <span class="vol-icon" id="volIcon">🔊</span>
         <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" />
         <span style="font-size:0.75rem;color:var(--text-muted);width:32px;text-align:right" id="volLabel">80%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Queue Card -->
+  <div class="card" id="orderQueueCard">
+    <div class="card-section">
+      <div class="playlist-header">
+        <span class="playlist-title" style="color:#fb923c">📋 Hàng đợi Order (<span id="hostOrderCount">0</span>)</span>
+        <span class="playlist-count" style="color:var(--text-muted);font-size:0.75rem;">Bài order sẽ phát trước nhạc Google Sheet</span>
+      </div>
+      
+      <div class="playlist-list" id="hostOrderList" style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
+        <div class="empty-playlist">
+          <div class="big">📋</div>
+          <p>Hàng đợi order trống — đang phát nhạc từ Google Sheet</p>
+        </div>
       </div>
     </div>
   </div>
@@ -944,6 +971,7 @@ const state = {
   isPlaying: false,
   volume: 80,
   saveTimer: null,
+  currentOrderSong: null, // currently playing order song if any
 };
 
 // ═══════════════════════════════════════════════════════
@@ -1631,6 +1659,21 @@ function toggleMember(name, chipEl, event) {
 }
 
 function renderNowPlaying() {
+  if (state.currentOrderSong) {
+    const song = state.currentOrderSong;
+    npAvatar.innerHTML = `<img src="/favicon.png" alt="Order" />`;
+    npContent.innerHTML = `
+      <p class="np-member" style="color:#fb923c">📱 Yêu cầu bởi: ${song.name}</p>
+      <p class="np-title">${song.title}</p>
+      <p class="np-artist">🎤 YouTube Stream</p>
+    `;
+    progressArea.style.display = 'block';
+    playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
+    if (state.isPlaying) npAvatar.classList.add('spinning');
+    else npAvatar.classList.remove('spinning');
+    return;
+  }
+
   const song = state.playlist[state.currentIndex];
   if (!song) {
     npAvatar.classList.remove('spinning');
@@ -1729,6 +1772,7 @@ function renderPlaylist() {
 // ═══════════════════════════════════════════════════════
 function playSong(index) {
   if (index < 0 || index >= state.playlist.length) return;
+  state.currentOrderSong = null; // Clear order song state
   state.currentIndex = index;
   const song = state.playlist[index];
 
@@ -1750,18 +1794,69 @@ function playSong(index) {
   });
 }
 
+function playOrderSong(song) {
+  state.currentOrderSong = song;
+  audioEl.src = `/api/stream?id=${song.vid}`;
+  audioEl.volume = state.volume / 100;
+  ensureVisualizer();
+
+  audioEl.play().then(() => {
+    state.isPlaying = true;
+    renderNowPlaying();
+    renderPlaylist();
+    saveProgress();
+  }).catch(err => {
+    console.warn('Autoplay blocked:', err);
+  });
+}
+
 function jumpTo(index) {
   playSong(index);
 }
 
-function playNext(skip = false) {
+async function playNext(skip = false) {
+  try {
+    const res = await fetch('/api/orders/next', { method: 'POST' });
+    if (!res.ok) throw new Error('API Error');
+    const data = await res.json();
+
+    if (data.nextSong) {
+      const song = data.nextSong;
+      if (skip) {
+        toast(`⏭ Bỏ qua: Phát nhạc order từ ${song.name}`);
+      } else {
+        toast(`🎵 Đang phát nhạc order của: ${song.name}`);
+      }
+      playOrderSong(song);
+      return;
+    }
+  } catch (err) {
+    console.warn('Failed to query next order, falling back to sheet:', err);
+  }
+
+  // Fallback to normal playlist
+  state.currentOrderSong = null;
   let next = state.currentIndex + 1;
   if (next >= state.playlist.length) next = 0; // loop
-  if (skip) toast(`⏭ Bỏ qua: ${state.playlist[state.currentIndex]?.title || ''}`);
+  if (skip) {
+    const currentTitle = state.playlist[state.currentIndex]?.title || '';
+    toast(`⏭ Bỏ qua: ${currentTitle}`);
+  }
   playSong(next);
 }
 
 function playPrev() {
+  if (state.currentOrderSong) {
+    if (audioEl.currentTime > 3) {
+      audioEl.currentTime = 0;
+      return;
+    }
+    // Return to the normal sheet playlist song
+    state.currentOrderSong = null;
+    playSong(state.currentIndex);
+    return;
+  }
+
   // If >3s into song, restart; else go to previous
   if (audioEl.currentTime > 3) {
     audioEl.currentTime = 0;
@@ -1773,8 +1868,8 @@ function playPrev() {
 }
 
 function togglePlayPause() {
-  if (state.playlist.length === 0) { toast('⚠️ Load Sheet trước đã'); return; }
-  if (state.currentIndex === -1) { playSong(0); return; }
+  if (state.playlist.length === 0 && !state.currentOrderSong) { toast('⚠️ Load Sheet trước đã'); return; }
+  if (state.currentIndex === -1 && !state.currentOrderSong) { playNext(); return; }
 
   if (audioEl.paused) {
     ensureVisualizer();
@@ -1965,6 +2060,108 @@ startBtn.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════
+//  ORDER HOST MANAGEMENT & LAN API HANDLERS
+// ═══════════════════════════════════════════════════════
+let hostOrders = [];
+
+async function updateHostOrders() {
+  try {
+    const res = await fetch('/api/orders');
+    if (!res.ok) return;
+    const data = await res.json();
+    hostOrders = data.orders;
+    renderHostOrders();
+  } catch (err) {
+    console.warn('Failed to poll host orders:', err);
+  }
+}
+
+function renderHostOrders() {
+  const container = $('hostOrderList');
+  const countEl = $('hostOrderCount');
+  if (!container || !countEl) return;
+  
+  countEl.textContent = hostOrders.length;
+  
+  if (hostOrders.length === 0) {
+    container.innerHTML = `
+      <div class="empty-playlist">
+        <div class="big">📋</div>
+        <p>Hàng đợi order trống — đang phát nhạc từ Google Sheet</p>
+      </div>`;
+    return;
+  }
+  
+  container.innerHTML = hostOrders.map((item, index) => `
+    <div class="pl-item" style="justify-content: space-between;">
+      <div class="pl-num">${index + 1}</div>
+      <div class="pl-info" style="flex: 1; margin-right: 12px;">
+        <div class="pl-name" style="font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(item.title)}</div>
+        <div class="pl-sub" style="font-size: 0.72rem; color: #fb923c;">Người gửi: <strong>${escapeHTML(item.name)}</strong></div>
+      </div>
+      <button class="btn btn-ghost" onclick="removeOrder('${item.id}', event)" style="padding: 4px 8px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: #f87171; background: transparent; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s;">Xóa</button>
+    </div>
+  `).join('');
+}
+
+async function removeOrder(id, event) {
+  if (event) event.stopPropagation();
+  if (!confirm('Bạn có chắc chắn muốn xóa yêu cầu này?')) return;
+  
+  try {
+    const res = await fetch('/api/orders/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast('✅ Đã xóa yêu cầu');
+      updateHostOrders();
+    } else {
+      toast(`❌ Lỗi: ${data.error}`);
+    }
+  } catch (err) {
+    console.error(err);
+    toast('❌ Lỗi kết nối API');
+  }
+}
+
+async function loadOrderIpInfo() {
+  try {
+    const res = await fetch('/api/ip');
+    if (!res.ok) return;
+    const data = await res.json();
+    const orderLink = $('orderLink');
+    if (orderLink) {
+      const url = `http://${data.ip}:${data.port}/order`;
+      orderLink.href = url;
+      orderLink.textContent = url;
+      
+      const copyBtn = $('copyOrderUrlBtn');
+      if (copyBtn) {
+        // Remove duplicate listeners if any
+        const newBtn = copyBtn.cloneNode(true);
+        copyBtn.parentNode.replaceChild(newBtn, copyBtn);
+        newBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(url).then(() => {
+            toast('📋 Đã sao chép link order!');
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to get local IP info:', err);
+  }
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
 loadSavedUrl();
@@ -1974,6 +2171,11 @@ if (visualizerCtx && !visualizerRaf) {
   visualizerRaf = requestAnimationFrame(drawVisualizer);
 }
 window.addEventListener('resize', resizeVisualizer);
+
+// Load order info and start polling
+loadOrderIpInfo();
+updateHostOrders();
+setInterval(updateHostOrders, 3000);
 </script>
 
 <!-- Search Feature -->
