@@ -131,6 +131,12 @@
   - Cơ chế chống "chiếm sóng": Giới hạn tối đa **2 bài liên tiếp** cho cùng một người order (nếu một người gửi liên tục nhiều bài, hệ thống sẽ tự động xen kẽ bài của người khác lên trước).
   - Trích xuất tiêu đề tự động bằng `yt-dlp` sử dụng cơ chế `execFile` an toàn và cấu hình `--encoding utf-8` để hiển thị chuẩn tiếng Việt có dấu.
 
+### 7. Bảng Vàng Âm Nhạc & Thống kê 📊
+- **Đếm số lượng phát**: Đếm tổng số bài đã phát, phân tích tỷ lệ phát nhạc Google Sheet (📄) và nhạc LAN Order (📱).
+- **Leaderboard "Chiếm Sóng"**: Xếp hạng Top 5 thành viên yêu cầu nhiều nhạc nhất được phát, hiển thị ảnh đại diện tròn xoay mini.
+- **Lịch sử phát gần đây**: Xem lại 10 bài hát đã chạy qua kèm mốc thời gian tương đối ("Vừa xong", "5 phút trước"...).
+- **Lưu trữ bảo mật**: Sử dụng `localStorage` của máy chủ nên dữ liệu tồn tại vĩnh viễn kể cả khi restart ứng dụng. Có nút đặt lại (Reset) để xóa lịch sử khi sang tuần/ngày mới.
+
 ---
 
 ## 📊 Thống kê dự án

@@ -114,18 +114,26 @@
       border-radius: 99px;
     }
     
+    /* Header Actions Wrapper */
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
     /* Party Mode Button */
     .party-btn {
-      margin-left: auto;
-      padding: 8px 16px;
+      padding: 6px 10px;
       background: linear-gradient(135deg, #ff6b6b, #feca57);
       border: none;
       border-radius: 99px;
       color: white;
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       cursor: pointer;
       transition: all 0.3s;
+      white-space: nowrap;
     }
     .party-btn:hover {
       transform: scale(1.05);
@@ -778,6 +786,249 @@
     /* ─── Misc ─── */
     .divider { height: 1px; background: var(--border); }
     .hidden { display: none !important; }
+
+    /* ─── Stats Button & Modal ─── */
+    .stats-btn {
+      padding: 6px 10px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      border: none;
+      border-radius: 99px;
+      color: white;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    .stats-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .stats-modal {
+      background: rgba(20, 20, 30, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    .modal-overlay.active .stats-modal {
+      transform: scale(1);
+    }
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+    .stats-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      background: linear-gradient(135deg, #fb923c, #ec4899, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .close-modal-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .close-modal-btn:hover {
+      color: var(--text);
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .stats-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stats-card-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .stats-card-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .leaderboard-section {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .section-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+    .leaderboard-rank {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fb923c;
+      width: 16px;
+      text-align: center;
+    }
+    .leaderboard-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid var(--accent);
+    }
+    .leaderboard-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      flex: 1;
+      color: var(--text);
+    }
+    .leaderboard-count {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .leaderboard-empty {
+      text-align: center;
+      padding: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    
+    .history-section {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .history-list::-webkit-scrollbar {
+      width: 3px;
+    }
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.8rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .history-info {
+      min-width: 0;
+      flex: 1;
+    }
+    .history-song-title {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-song-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .history-time-badge {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .history-empty {
+      text-align: center;
+      padding: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    
+    .stats-footer {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -808,7 +1059,10 @@
     <img src="/favicon.png" alt="Logo" class="app-header-logo" id="logo" />
     <h1>Lotusquant Music Player</h1>
     <span class="badge">LotusQuant Internal</span>
-    <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
+    <div class="header-actions">
+      <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
+      <button class="stats-btn" id="statsBtn">📊 Thống kê</button>
+    </div>
   </div>
 
   <!-- Sheet URL Card -->
@@ -946,6 +1200,55 @@
           <div class="big">🎶</div>
           <p>Playlist trống — Load Sheet để bắt đầu</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats & Dashboard Modal -->
+  <div class="modal-overlay" id="statsOverlay">
+    <div class="stats-modal">
+      <div class="stats-header">
+        <h2>📊 Bảng Vàng Âm Nhạc</h2>
+        <button class="close-modal-btn" id="closeStatsBtn">&times;</button>
+      </div>
+      
+      <!-- Grid Stats -->
+      <div class="stats-grid">
+        <div class="stats-card">
+          <span class="stats-card-val" id="statTotal">0</span>
+          <span class="stats-card-label">Đã phát</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card-val" id="statDefault">0</span>
+          <span class="stats-card-label">📄 Nhạc Sheet</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card-val" id="statOrder">0</span>
+          <span class="stats-card-label">📱 Nhạc Order</span>
+        </div>
+      </div>
+      
+      <!-- Leaderboard Section -->
+      <div class="leaderboard-section">
+        <div class="section-title">👑 Top Chiếm Sóng</div>
+        <div class="leaderboard-list" id="statsLeaderboard">
+          <div class="leaderboard-empty">Chưa có dữ liệu xếp hạng</div>
+        </div>
+      </div>
+      
+      <!-- Recent History Section -->
+      <div class="history-section">
+        <div class="section-title">🕐 Lịch Sử Phát Gần Đây</div>
+        <div class="history-list" id="statsHistoryList">
+          <div class="history-empty">Chưa có bài hát nào được phát</div>
+        </div>
+      </div>
+      
+      <!-- Footer Reset -->
+      <div class="stats-footer">
+        <button class="btn btn-ghost" id="resetStatsBtn" style="color:#ef4444;border-color:rgba(239,68,68,0.2)">
+          🗑️ Đặt lại thống kê
+        </button>
       </div>
     </div>
   </div>
@@ -1801,6 +2104,11 @@ function playSong(index) {
     renderPlaylist();
     saveProgress();
     
+    // Record statistics history (Default sheet song)
+    if (typeof recordPlayHistory === 'function') {
+      recordPlayHistory(song, false);
+    }
+    
     // Trigger songStarted event for fun features
     window.dispatchEvent(new CustomEvent('songStarted', { detail: song }));
   }).catch(err => {
@@ -1819,6 +2127,11 @@ function playOrderSong(song) {
     renderNowPlaying();
     renderPlaylist();
     saveProgress();
+    
+    // Record statistics history (Order song)
+    if (typeof recordPlayHistory === 'function') {
+      recordPlayHistory(song, true);
+    }
   }).catch(err => {
     console.warn('Autoplay blocked:', err);
   });
@@ -2173,6 +2486,170 @@ function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, 
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
+}
+
+// ═══════════════════════════════════════════════════════
+//  MUSIC STATISTICS & DASHBOARD LOGIC
+// ═══════════════════════════════════════════════════════
+function recordPlayHistory(song, isOrder) {
+  if (!song) return;
+  let history = [];
+  try {
+    const raw = localStorage.getItem('mcp_history');
+    if (raw) history = JSON.parse(raw);
+  } catch (err) {
+    console.warn('Failed to parse history:', err);
+  }
+  
+  // Prevent duplicate consecutive entries within 5 seconds (to avoid double counts on play/pause or rapid jumps)
+  const lastEntry = history[history.length - 1];
+  if (lastEntry && lastEntry.vid === song.vid && (Date.now() - lastEntry.timestamp) < 5000) {
+    return;
+  }
+  
+  history.push({
+    vid: song.vid,
+    title: song.title,
+    artist: song.artist || 'YouTube Stream',
+    name: song.name,
+    isOrder: isOrder,
+    timestamp: Date.now()
+  });
+  
+  // Keep history size reasonable
+  if (history.length > 500) {
+    history.shift();
+  }
+  
+  localStorage.setItem('mcp_history', JSON.stringify(history));
+}
+
+function calculateStats() {
+  let history = [];
+  try {
+    const raw = localStorage.getItem('mcp_history');
+    if (raw) history = JSON.parse(raw);
+  } catch (err) {}
+  
+  const total = history.length;
+  const defaults = history.filter(h => !h.isOrder).length;
+  const orders = history.filter(h => h.isOrder).length;
+  
+  // Calculate leaderboard
+  const counts = {};
+  history.forEach(h => {
+    const name = h.name ? h.name.trim() : '';
+    if (name) {
+      counts[name] = (counts[name] || 0) + 1;
+    }
+  });
+  
+  const leaderboard = Object.keys(counts)
+    .map(name => ({ name, count: counts[name] }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5); // top 5
+    
+  // Recent 10 history
+  const recent = [...history].reverse().slice(0, 10);
+  
+  return { total, defaults, orders, leaderboard, recent };
+}
+
+function renderStatsUI() {
+  const { total, defaults, orders, leaderboard, recent } = calculateStats();
+  
+  $('statTotal').textContent = total;
+  $('statDefault').textContent = defaults;
+  $('statOrder').textContent = orders;
+  
+  // Render Leaderboard
+  const leaderboardEl = $('statsLeaderboard');
+  if (leaderboard.length === 0) {
+    leaderboardEl.innerHTML = '<div class="leaderboard-empty">Chưa có dữ liệu xếp hạng</div>';
+  } else {
+    leaderboardEl.innerHTML = leaderboard.map((item, index) => {
+      const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+      const avatarSrc = `/people/${item.name}.jpg`;
+      return `
+        <div class="leaderboard-item">
+          <div class="leaderboard-rank">${rankEmoji}</div>
+          <img class="leaderboard-avatar" src="${avatarSrc}" onerror="this.src='/favicon.png'" alt="${item.name}">
+          <div class="leaderboard-name">${escapeHTML(item.name)}</div>
+          <div class="leaderboard-count">${item.count} bài</div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  // Render History
+  const historyListEl = $('statsHistoryList');
+  if (recent.length === 0) {
+    historyListEl.innerHTML = '<div class="history-empty">Chưa có bài hát nào được phát</div>';
+  } else {
+    historyListEl.innerHTML = recent.map(item => {
+      const typeBadge = item.isOrder ? '📱 Order' : '📄 Sheet';
+      const timeStr = formatRelativeTime(item.timestamp);
+      return `
+        <div class="history-item">
+          <div class="history-info">
+            <div class="history-song-title">${escapeHTML(item.title)}</div>
+            <div class="history-song-sub">👤 ${escapeHTML(item.name)} • ${typeBadge}</div>
+          </div>
+          <div class="history-time-badge">${timeStr}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function formatRelativeTime(timestamp) {
+  const diff = Date.now() - timestamp;
+  if (diff < 60000) return 'Vừa xong';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const date = new Date(timestamp);
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+// Stats modal interaction
+const statsBtn = $('statsBtn');
+const statsOverlay = $('statsOverlay');
+const closeStatsBtn = $('closeStatsBtn');
+const resetStatsBtn = $('resetStatsBtn');
+
+if (statsBtn && statsOverlay) {
+  statsBtn.addEventListener('click', () => {
+    renderStatsUI();
+    statsOverlay.classList.add('active');
+  });
+}
+
+if (closeStatsBtn && statsOverlay) {
+  closeStatsBtn.addEventListener('click', () => {
+    statsOverlay.classList.remove('active');
+  });
+}
+
+// Close on clicking overlay
+if (statsOverlay) {
+  statsOverlay.addEventListener('click', (e) => {
+    if (e.target === statsOverlay) {
+      statsOverlay.classList.remove('active');
+    }
+  });
+}
+
+// Reset stats
+if (resetStatsBtn) {
+  resetStatsBtn.addEventListener('click', () => {
+    if (confirm('⚠️ Bạn có chắc chắn muốn đặt lại tất cả số liệu thống kê không?')) {
+      localStorage.removeItem('mcp_history');
+      renderStatsUI();
+      toast('🗑️ Đã đặt lại dữ liệu thống kê!');
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════
