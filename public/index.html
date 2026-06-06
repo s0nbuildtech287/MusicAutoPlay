@@ -1156,22 +1156,22 @@ function drawVisualizer() {
   visualizerCtx.fillStyle = radialGlow;
   visualizerCtx.fillRect(0, 0, width, height);
 
-  // 2. Draw vertical bars (background wave - softer)
+  // 2. Draw vertical bars (background wave - brighter and more vibrant)
   const barWidth = 3.2 * dpr;
   const barGap = 3.8 * dpr;
   const step = barWidth + barGap;
   const numBars = Math.floor(width / step);
   const maxHeight = height * 0.36;
 
-  // Create horizontal linear gradient across the visualizer width
+  // Create horizontal linear gradient across the visualizer width with higher opacity
   const grad = visualizerCtx.createLinearGradient(0, 0, width, 0);
-  grad.addColorStop(0, 'rgba(88, 28, 135, 0.4)');      // Deep violet
-  grad.addColorStop(0.18, 'rgba(37, 99, 235, 0.5)');   // Royal Blue
-  grad.addColorStop(0.35, 'rgba(6, 182, 212, 0.5)');   // Electric Cyan
-  grad.addColorStop(0.5, 'rgba(236, 72, 153, 0.6)');    // Hot Pink
-  grad.addColorStop(0.65, 'rgba(217, 70, 239, 0.5)');   // Fuchsia
-  grad.addColorStop(0.82, 'rgba(139, 92, 246, 0.5)');   // Purple
-  grad.addColorStop(1, 'rgba(88, 28, 135, 0.4)');      // Deep violet
+  grad.addColorStop(0, 'rgba(88, 28, 135, 0.6)');      // Deep violet
+  grad.addColorStop(0.18, 'rgba(37, 99, 235, 0.85)');   // Royal Blue
+  grad.addColorStop(0.35, 'rgba(6, 182, 212, 0.9)');    // Electric Cyan
+  grad.addColorStop(0.5, 'rgba(236, 72, 153, 0.95)');   // Hot Pink
+  grad.addColorStop(0.65, 'rgba(217, 70, 239, 0.85)');  // Fuchsia
+  grad.addColorStop(0.82, 'rgba(139, 92, 246, 0.85)');  // Purple
+  grad.addColorStop(1, 'rgba(88, 28, 135, 0.6)');      // Deep violet
 
   visualizerCtx.save();
   visualizerCtx.lineCap = 'round';
@@ -1180,7 +1180,7 @@ function drawVisualizer() {
   // Layer 1: Wide soft glow
   visualizerCtx.beginPath();
   visualizerCtx.lineWidth = barWidth * 3.5;
-  visualizerCtx.globalAlpha = 0.06;
+  visualizerCtx.globalAlpha = 0.15;
   for (let i = 0; i < numBars; i++) {
     const x = i * step + barWidth / 2;
     const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
@@ -1196,7 +1196,7 @@ function drawVisualizer() {
   // Layer 2: Medium glow
   visualizerCtx.beginPath();
   visualizerCtx.lineWidth = barWidth * 2.0;
-  visualizerCtx.globalAlpha = 0.18;
+  visualizerCtx.globalAlpha = 0.35;
   for (let i = 0; i < numBars; i++) {
     const x = i * step + barWidth / 2;
     const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
@@ -1212,7 +1212,7 @@ function drawVisualizer() {
   // Layer 3: Solid core
   visualizerCtx.beginPath();
   visualizerCtx.lineWidth = barWidth;
-  visualizerCtx.globalAlpha = 0.45;
+  visualizerCtx.globalAlpha = 0.80;
   for (let i = 0; i < numBars; i++) {
     const x = i * step + barWidth / 2;
     const distanceFromCenter = Math.abs(i - numBars / 2) / (numBars / 2);
@@ -1227,13 +1227,13 @@ function drawVisualizer() {
 
   visualizerCtx.restore();
 
-  // 3. Draw horizontal glowing white line
+  // 3. Draw horizontal glowing white line (brighter)
   // Draw outer glow line
   visualizerCtx.beginPath();
   visualizerCtx.moveTo(0, centerY);
   visualizerCtx.lineTo(width, centerY);
   visualizerCtx.lineWidth = 6 * dpr;
-  visualizerCtx.strokeStyle = 'rgba(236, 72, 153, 0.15)'; // pink outer glow
+  visualizerCtx.strokeStyle = 'rgba(236, 72, 153, 0.35)'; // pink outer glow
   visualizerCtx.stroke();
 
   // Draw inner glow line
@@ -1241,7 +1241,7 @@ function drawVisualizer() {
   visualizerCtx.moveTo(0, centerY);
   visualizerCtx.lineTo(width, centerY);
   visualizerCtx.lineWidth = 3 * dpr;
-  visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // soft white glow
+  visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.55)'; // soft white glow
   visualizerCtx.stroke();
 
   // Draw core white line
@@ -1249,7 +1249,7 @@ function drawVisualizer() {
   visualizerCtx.moveTo(0, centerY);
   visualizerCtx.lineTo(width, centerY);
   visualizerCtx.lineWidth = 1.2 * dpr;
-  visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
   visualizerCtx.stroke();
 
   visualizerRaf = requestAnimationFrame(drawVisualizer);
