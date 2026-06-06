@@ -1674,7 +1674,8 @@ function toggleMember(name, chipEl, event) {
 function renderNowPlaying() {
   if (state.currentOrderSong) {
     const song = state.currentOrderSong;
-    npAvatar.innerHTML = `<img src="/favicon.png" alt="Order" />`;
+    const memberPhoto = `/people/${song.name}.jpg`;
+    npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png'" />`;
     npContent.innerHTML = `
       <p class="np-member" style="color:#fb923c">📱 Yêu cầu bởi: ${song.name}</p>
       <p class="np-title">${song.title}</p>
