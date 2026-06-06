@@ -447,7 +447,7 @@
       text-align: center;
     }
     .np-avatar {
-      width: 96px; height: 96px;
+      width: 120px; height: 120px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), #60a5fa);
       display: flex;
@@ -481,7 +481,7 @@
       will-change: transform;
     }
     .np-avatar.spinning img {
-      animation: spin-slow 24s linear infinite;
+      animation: spin-slow 40s linear infinite;
     }
     @keyframes spin-slow {
       from { transform: rotate(0deg); }
@@ -1238,9 +1238,20 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
   // Clear canvas
   circularCtx.clearRect(0, 0, width, height);
 
-  const innerRadius = 52; // Avatar is 96px, half is 48px + 4px padding/border
+  const innerRadius = 64; // Avatar is 120px, half is 60px + 4px padding/border
   const maxBarLength = 38; // Maximum bar length extending outwards
   const numBars = 64; // Number of radiating bars
+
+  // Color helper matching logo gradient (Yellow -> Orange -> Pink -> Violet/Purple)
+  const getCol = (i) => {
+    const pct = i / numBars;
+    let hue;
+    if (pct < 0.25) hue = 310 + (pct / 0.25) * 100; // Top (violet/pink) to Right (yellow)
+    else if (pct < 0.5) hue = 50 - ((pct - 0.25) / 0.25) * 25; // Right (yellow) to Bottom (orange)
+    else if (pct < 0.75) hue = 25 - ((pct - 0.5) / 0.25) * 35; // Bottom (orange) to Left (coral/pink)
+    else hue = 350 - ((pct - 0.75) / 0.25) * 40; // Left (coral/pink) to Top (violet/pink)
+    return (hue + 360) % 360;
+  };
 
   // 1. Draw radiating spectrum bars as a matrix of sparkling square blocks (Double Pass for Glow + Core)
   const blockSize = 2.4;
@@ -1261,7 +1272,7 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
     circularCtx.rotate(angle);
     
     const activeBlocks = Math.ceil((rawHeight / 255) * maxBlocks);
-    const hue = 310 + (index / half) * 45; // Pink/Magenta gradient
+    const hue = getCol(i);
     
     for (let j = 0; j < activeBlocks; j++) {
       const x = innerRadius + j * step;
@@ -1289,7 +1300,7 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
     circularCtx.rotate(angle);
     
     const activeBlocks = Math.ceil((rawHeight / 255) * maxBlocks);
-    const hue = 310 + (index / half) * 45;
+    const hue = getCol(i);
     
     for (let j = 0; j < activeBlocks; j++) {
       const x = innerRadius + j * step;
@@ -1302,39 +1313,42 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
     circularCtx.restore();
   }
 
-  // 2. Draw outer wavy neon ring connecting the peaks (mechanical wave)
+  // 2. Draw outer wavy neon ring connecting the peaks (mechanical wave) as connected gradient segments
   circularCtx.save();
   circularCtx.lineWidth = 2.5;
-  circularCtx.strokeStyle = '#00f0ff'; // Neon Cyan/Blue
-  circularCtx.shadowBlur = 12;
-  circularCtx.shadowColor = 'rgba(0, 240, 255, 0.85)';
+  circularCtx.shadowBlur = 10;
   
-  circularCtx.beginPath();
-  for (let i = 0; i <= numBars; i++) {
-    const angle = (i / numBars) * Math.PI * 2 - Math.PI / 2;
+  for (let i = 0; i < numBars; i++) {
+    const angle0 = (i / numBars) * Math.PI * 2 - Math.PI / 2;
+    const angle1 = ((i + 1) / numBars) * Math.PI * 2 - Math.PI / 2;
+    
     const half = numBars / 2;
-    const index = i < half ? i : numBars - i;
-    const binIndex = Math.floor((index / half) * 255 * 0.7);
-    const rawHeight = window.smoothedHeights[binIndex] || 0;
+    const index0 = i < half ? i : numBars - i;
+    const binIndex0 = Math.floor((index0 / half) * 255 * 0.7);
+    const rawHeight0 = window.smoothedHeights[binIndex0] || 0;
     
-    // Wave peaks radius
-    const waveRadius = innerRadius + Math.max(1.5, (rawHeight / 255) * maxBarLength) + 3;
+    const nextI = (i + 1) % numBars;
+    const index1 = nextI < half ? nextI : numBars - nextI;
+    const binIndex1 = Math.floor((index1 / half) * 255 * 0.7);
+    const rawHeight1 = window.smoothedHeights[binIndex1] || 0;
     
-    const x = cx + Math.cos(angle) * waveRadius;
-    const y = cy + Math.sin(angle) * waveRadius;
+    const waveRadius0 = innerRadius + Math.max(1.5, (rawHeight0 / 255) * maxBarLength) + 3;
+    const waveRadius1 = innerRadius + Math.max(1.5, (rawHeight1 / 255) * maxBarLength) + 3;
     
-    if (i === 0) {
-      circularCtx.moveTo(x, y);
-    } else {
-      circularCtx.lineTo(x, y);
-    }
+    const x0 = cx + Math.cos(angle0) * waveRadius0;
+    const y0 = cy + Math.sin(angle0) * waveRadius0;
+    const x1 = cx + Math.cos(angle1) * waveRadius1;
+    const y1 = cy + Math.sin(angle1) * waveRadius1;
+    
+    const hue = getCol(i);
+    circularCtx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.9)`;
+    circularCtx.shadowColor = `hsla(${hue}, 100%, 60%, 0.85)`;
+    
+    circularCtx.beginPath();
+    circularCtx.moveTo(x0, y0);
+    circularCtx.lineTo(x1, y1);
+    circularCtx.stroke();
   }
-  circularCtx.closePath();
-  circularCtx.stroke();
-  
-  // Fill the circular wave inside with soft cyan glow
-  circularCtx.fillStyle = 'rgba(0, 240, 255, 0.04)';
-  circularCtx.fill();
   circularCtx.restore();
 }
 
