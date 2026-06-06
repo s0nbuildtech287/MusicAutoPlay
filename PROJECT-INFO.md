@@ -21,6 +21,7 @@
 ✅ Search nhanh bài hát  
 ✅ Desktop app, không cần browser  
 ✅ Fun features (Party Mode, Achievements, Easter Eggs)  
+✅ Tính năng Order Nhạc nội bộ LAN: Đồng nghiệp tự quét mã/truy cập link trên điện thoại gửi yêu cầu bài hát YouTube.  
 
 ---
 
@@ -37,35 +38,46 @@
 ### Architecture:
 
 ```
-┌─────────────────────────────────────┐
-│   Electron Window (Desktop App)    │
-│  ┌───────────────────────────────┐ │
-│  │  Browser (Chromium)           │ │
-│  │  ┌─────────────────────────┐  │ │
-│  │  │  Frontend (HTML/JS)     │  │ │
-│  │  │  - index.html           │  │ │
-│  │  │  - search-feature.js    │  │ │
-│  │  │  - fun-features.js      │  │ │
-│  │  └──────────┬──────────────┘  │ │
-│  └─────────────┼─────────────────┘ │
-└────────────────┼───────────────────┘
-                 │ HTTP (localhost:7777)
-                 ↓
-┌─────────────────────────────────────┐
-│   Express Server (Node.js)          │
-│  ┌───────────────────────────────┐  │
-│  │  /api/stream?id=VIDEO_ID     │  │
-│  │  → yt-dlp → YouTube audio    │  │
-│  └───────────────────────────────┘  │
-│  ┌───────────────────────────────┐  │
-│  │  Static files (/public)       │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────┐
-│  Google Sheets (CSV Export)         │
-│  STT | Tên | Bài | Ca sĩ | URL     │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│       Electron Window (Desktop App)       │
+│  ┌─────────────────────────────────────┐  │
+│  │  Browser (Chromium)                 │  │
+│  │  ┌───────────────────────────────┐  │  │
+│  │  │  Frontend (HTML/JS)           │  │  │
+│  │  │  - index.html                 │  │  │
+│  │  │  - search-feature.js          │  │  │
+│  │  │  - fun-features.js            │  │  │
+│  │  └──────────────┬────────────────┘  │  │
+│  └─────────────────┼───────────────────┘  │
+└────────────────────┼──────────────────────┘
+                     │ HTTP (localhost:7777)
+                     ↓
+┌───────────────────────────────────────────┐
+│       Express Server (Node.js)            │
+│  ┌─────────────────────────────────────┐  │
+│  │  /api/stream?id=VIDEO_ID            │  │
+│  │  /api/order (POST - submit request) │  │
+│  │  /api/orders (GET - current queue)  │  │
+│  │  /api/orders/next (GET next song)   │  │
+│  │  /api/members (POST/GET sync names) │  │
+│  │  → yt-dlp → YouTube audio stream     │  │
+│  └─────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────┐  │
+│  │  Static files (/public)             │  │
+│  │  - order.html (Mobile Order Page)   │  │
+│  └───────────▲─────────────────────────┘  │
+└──────────────┼────────────────────────────┘
+               │ HTTP Requests (LAN port 7777)
+               │ (Order & Queue updates)
+        ┌──────┴────────────────────────┐
+        │   Mobile / Web Clients (LAN)  │
+        │  (Đồng nghiệp tại văn phòng)  │
+        └───────────────────────────────┘
+                     ↓
+┌───────────────────────────────────────────┐
+│     Google Sheets (CSV Export)            │
+│     STT | Tên | Bài | Ca sĩ | URL         │
+└───────────────────────────────────────────┘
 ```
 
 ---
@@ -106,6 +118,18 @@
 - **Now Playing**: Info bài đang phát rõ ràng
 - **Playlist View**: Status (playing/done), click to jump
 - **Responsive**: Auto-adjust theo window size
+
+### 6. LAN Music Order 📱
+- **Local Server Hosting**: Khởi động web server ngầm trên cổng `7777` cho phép mọi người truy cập qua mạng nội bộ LAN/Wi-Fi.
+- **Dò IP LAN thông minh**: Tự động lọc bỏ các card mạng ảo/VPN (WSL, Docker, VirtualBox, VMware, OpenVPN...) và ưu tiên card Wi-Fi/Ethernet thực tế.
+- **Trang Order di động (`order.html`)**:
+  - Giao diện Glassmorphism mượt mà tối ưu cho di động.
+  - Dropdown chọn tên tự động đồng bộ từ file Google Sheet loaded (kèm option tự điền nếu là nhân viên mới).
+  - Cập nhật hàng đợi Realtime sau mỗi 3 giây, tự động ghi nhớ tên người gửi.
+- **Thuật toán xếp lịch (Round-Robin Queue scheduler)**:
+  - Tự động ưu tiên phát nhạc order trước, khi hàng đợi rỗng tự động quay về nhạc Google Sheet.
+  - Cơ chế chống "chiếm sóng": Giới hạn tối đa **2 bài liên tiếp** cho cùng một người order (nếu một người gửi liên tục nhiều bài, hệ thống sẽ tự động xen kẽ bài của người khác lên trước).
+  - Trích xuất tiêu đề tự động bằng `yt-dlp` sử dụng cơ chế `execFile` an toàn và cấu hình `--encoding utf-8` để hiển thị chuẩn tiếng Việt có dấu.
 
 ---
 
@@ -159,25 +183,25 @@
 - Easter eggs
 - Keyboard shortcuts (Space, arrows, Ctrl+B)
 
-### Backend:
+#### 4. `order.html` (Mobile Order Page - 400 LOC)
+**Responsibilities:**
+- Giao diện nhập link nhạc YouTube phong cách Glassmorphism cho thiết bị di động.
+- Dropdown danh sách thành viên tự động tải từ máy chủ.
+- Hiển thị hàng đợi thời gian thực cập nhật sau mỗi 3 giây.
+- Lưu trữ tên người order vào LocalStorage.
 
-#### `server.js` (Express Server)
-- Serve static files
-- Serve member photos
-- Route /api/stream
+### Backend & Desktop App:
 
-#### `api/stream.js` (YouTube Streaming)
-- Use yt-dlp to extract audio
-- Stream audio to client
-- Format fallback (bestaudio → best → worstaudio)
-
-### Desktop App:
-
-#### `electron-main.js` (Electron Main Process)
-- Create browser window
-- Embed Express server
-- Handle window events
-- Load URL (http://127.0.0.1:7777)
+#### `electron-main.js` (Electron Main Process & Integrated Server - 320 LOC)
+- **Electron Window**: Khởi tạo cửa sổ Chromium hiển thị giao diện Player chính.
+- **Express Server**: Khởi chạy web server lắng nghe cổng `7777` trên mọi địa chỉ IP (`0.0.0.0`) để phục vụ mạng LAN.
+- **Dò quét IP mạng**: Logic tìm kiếm card mạng thực tế (Wi-Fi/Ethernet) và lọc bỏ card ảo/VPN.
+- **YouTube Streaming (`/api/stream`)**: Sử dụng `spawn` chạy ngầm `yt-dlp` để trích xuất và pipe luồng âm thanh định dạng `.webm` trực tiếp về client.
+- **Order Management APIs**:
+  - `POST /api/order`: Tiếp nhận yêu cầu, phân tích video ID, gọi `execFile` của `yt-dlp` lấy tiêu đề với bảng mã UTF-8.
+  - `GET /api/orders`: Trả về hàng đợi đang chờ.
+  - `POST /api/orders/next`: Lập lịch Round-Robin và giới hạn tối đa 2 bài liên tiếp của một người order.
+  - `POST /api/members` / `GET /api/members`: Đồng bộ danh sách tên từ Google Sheet sang trang order.
 
 ---
 
