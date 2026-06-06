@@ -265,6 +265,19 @@
     .toast.success { border-color: rgba(52, 211, 153, 0.4); }
     .toast.error { border-color: rgba(239, 68, 68, 0.4); }
 
+    /* Closed Banner */
+    .order-closed {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .order-closed .closed-icon { font-size: 3rem; }
+    .order-closed h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .order-closed p  { font-size: 0.85rem; color: var(--text-muted); }
+
     @keyframes toast-in  { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
     @keyframes toast-out { from { opacity:1; } to { opacity:0; transform: translateY(10px); } }
   </style>
@@ -512,6 +525,49 @@
     // Initial load and poll every 3 seconds
     fetchQueue();
     setInterval(fetchQueue, 3000);
+
+    // ── Check order status & lock/unlock form ──────────────
+    const orderFormCard = document.querySelector('.card');
+    let orderOpen = true;
+
+    function applyOrderStatus(enabled) {
+      if (orderOpen === enabled) return;
+      orderOpen = enabled;
+      const existing = document.getElementById('orderClosedBanner');
+
+      if (!enabled) {
+        // Show closed banner, hide form
+        form.style.display = 'none';
+        if (!existing) {
+          const banner = document.createElement('div');
+          banner.id = 'orderClosedBanner';
+          banner.className = 'order-closed';
+          banner.innerHTML = `
+            <div class="closed-icon">🔒</div>
+            <h2>Order nhạc đang tạm đóng</h2>
+            <p>Admin chưa mở order — vui lòng chờ nhé!</p>
+          `;
+          form.parentNode.insertBefore(banner, form);
+        }
+      } else {
+        // Restore form
+        form.style.display = '';
+        if (existing) existing.remove();
+      }
+    }
+
+    async function checkOrderStatus() {
+      try {
+        const res = await fetch('/api/order-status');
+        if (!res.ok) return;
+        const data = await res.json();
+        applyOrderStatus(data.enabled);
+      } catch {}
+    }
+
+    // Check on load, then every 5s
+    checkOrderStatus();
+    setInterval(checkOrderStatus, 5000);
   </script>
 </body>
 </html>

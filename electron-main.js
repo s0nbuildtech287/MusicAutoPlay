@@ -70,6 +70,7 @@ let orderQueue = [];
 let currentPlayingUser = null;
 let consecutiveCount = 0;
 let membersList = [];
+let orderEnabled = false; // Admin toggle — off by default
 
 // Start Express server inside Electron
 function startServer() {
@@ -151,8 +152,21 @@ function startServer() {
     res.json({ ip: getLocalIp(), port: PORT });
   });
 
+  // API to get/set order enabled state (admin only)
+  expressApp.get('/api/order-status', (req, res) => {
+    res.json({ enabled: orderEnabled });
+  });
+  expressApp.post('/api/order-toggle', (req, res) => {
+    orderEnabled = req.body.enabled === true;
+    console.log(`[Order] Order ${orderEnabled ? 'ENABLED' : 'DISABLED'} by admin`);
+    res.json({ enabled: orderEnabled });
+  });
+
   // API to submit an order
   expressApp.post('/api/order', (req, res) => {
+    if (!orderEnabled) {
+      return res.status(403).json({ error: 'Order nhạc hiện đang tắt — chờ admin mở nhé! 🎵' });
+    }
     const { name, url } = req.body;
     if (!name || !url) {
       return res.status(400).json({ error: 'Vui lòng nhập tên và đường dẫn bài hát!' });

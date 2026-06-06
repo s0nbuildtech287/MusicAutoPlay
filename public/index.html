@@ -838,6 +838,55 @@
       50%       { opacity: 0.38; transform: scale(1.12); }
     }
 
+    /* ─── Order Toggle Switch ─── */
+    .order-toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .order-toggle-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .order-toggle-wrap.is-on .order-toggle-label {
+      color: #4ade80;
+    }
+    .order-toggle-track {
+      width: 40px;
+      height: 22px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      position: relative;
+      transition: background 0.25s, border-color 0.25s;
+      flex-shrink: 0;
+    }
+    .order-toggle-wrap.is-on .order-toggle-track {
+      background: rgba(74, 222, 128, 0.25);
+      border-color: #4ade80;
+      box-shadow: 0 0 10px rgba(74,222,128,0.3);
+    }
+    .order-toggle-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.25s, background 0.25s;
+    }
+    .order-toggle-wrap.is-on .order-toggle-thumb {
+      transform: translateX(18px);
+      background: #4ade80;
+    }
+
     /* Order banner glow pulse */
     #orderBannerCard {
       animation: order-glow 2.8s ease-in-out infinite;
@@ -1373,11 +1422,20 @@
 
       <!-- Order Banner Card -->
       <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.18); border-color: rgba(251, 146, 60, 0.7); box-shadow: 0 0 18px rgba(251, 146, 60, 0.25), inset 0 0 20px rgba(251, 146, 60, 0.06);">
-        <div class="card-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;flex-wrap:wrap;">
-          <p style="font-size:0.88rem;color:#fff;margin:0;font-weight:500;text-shadow:0 0 12px rgba(251,146,60,0.6);">
+        <div class="card-section" style="display:flex;align-items:center;gap:10px;padding:12px 20px;flex-wrap:wrap;">
+          <p style="font-size:0.88rem;color:#fff;margin:0;font-weight:500;text-shadow:0 0 12px rgba(251,146,60,0.6);flex:1;min-width:0;">
             📱 Mọi người order nhạc tại: <a href="#" id="orderLink" target="_blank" style="color:#fed7aa;font-weight:700;text-decoration:none;text-shadow:0 0 14px rgba(251,146,60,0.9);">Đang tải...</a>
           </p>
-          <button class="btn btn-ghost" id="copyOrderUrlBtn" style="padding:6px 12px;font-size:0.75rem;border-color:rgba(251,146,60,0.6);color:#fb923c;background:rgba(251,146,60,0.1);cursor:pointer;border-radius:var(--radius-sm);transition:all 0.2s;font-weight:700;">Sao chép Link</button>
+          <!-- Copy icon button -->
+          <button id="copyOrderUrlBtn" title="Sao chép link" style="flex-shrink:0;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(251,146,60,0.6);color:#fb923c;background:rgba(251,146,60,0.1);cursor:pointer;border-radius:8px;transition:all 0.2s;font-size:1rem;">📋</button>
+          <!-- Order toggle -->
+          <label class="order-toggle-wrap" title="Bật/tắt cho phép order nhạc" style="flex-shrink:0;">
+            <span class="order-toggle-label" id="orderToggleLabel">OFF</span>
+            <div class="order-toggle-track" id="orderToggleTrack">
+              <input type="checkbox" id="orderToggle" style="display:none;">
+              <div class="order-toggle-thumb"></div>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -3091,6 +3149,44 @@ function escapeHTML(str) {
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
 }
+
+// ─── Order Toggle (Admin) ─────────────────────────────────
+(function initOrderToggle() {
+  const wrap  = document.querySelector('.order-toggle-wrap');
+  const track = $('orderToggleTrack');
+  const label = $('orderToggleLabel');
+  if (!wrap || !track || !label) return;
+
+  function setUI(enabled) {
+    if (enabled) {
+      wrap.classList.add('is-on');
+      label.textContent = 'ON';
+    } else {
+      wrap.classList.remove('is-on');
+      label.textContent = 'OFF';
+    }
+  }
+
+  // Fetch current state from server
+  fetch('/api/order-status').then(r => r.json()).then(d => setUI(d.enabled)).catch(() => {});
+
+  // Click anywhere on the label/track toggles
+  wrap.addEventListener('click', async () => {
+    const isOn = wrap.classList.contains('is-on');
+    try {
+      const res = await fetch('/api/order-toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !isOn }),
+      });
+      const d = await res.json();
+      setUI(d.enabled);
+      toast(d.enabled ? '✅ Đã bật order nhạc' : '🔒 Đã tắt order nhạc');
+    } catch {
+      toast('⚠️ Không thể đổi trạng thái order');
+    }
+  });
+})();
 
 // ═══════════════════════════════════════════════════════
 //  MUSIC STATISTICS & DASHBOARD LOGIC
