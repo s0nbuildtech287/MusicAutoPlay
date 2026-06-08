@@ -587,6 +587,18 @@
       transition: all 0.2s;
     }
     .ctrl-btn:hover { background: var(--border); color: var(--text); }
+    .ctrl-btn:disabled {
+      cursor: wait;
+      opacity: 0.65;
+      pointer-events: none;
+    }
+    .ctrl-btn.is-loading {
+      animation: controlPulse 0.85s ease-in-out infinite alternate;
+    }
+    @keyframes controlPulse {
+      from { transform: scale(0.96); }
+      to { transform: scale(1.04); }
+    }
     .ctrl-btn.play-pause {
       width: 54px; height: 54px;
       background: var(--accent);
@@ -1649,6 +1661,7 @@ const state = {
   playlist: [],         // built playlist [{...song, plIndex}]
   currentIndex: -1,
   isPlaying: false,
+  isPlaybackLoading: false,
   volume: 80,
   saveTimer: null,
   currentOrderSong: null, // currently playing order song if any
@@ -2852,11 +2865,29 @@ function renderPlaylist() {
   if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
+function setPlaybackLoading(isLoading, source = 'play') {
+  state.isPlaybackLoading = !!isLoading;
+  playPauseBtn.disabled = state.isPlaybackLoading;
+  nextBtn.disabled = state.isPlaybackLoading;
+  playPauseBtn.classList.toggle('is-loading', state.isPlaybackLoading && source !== 'next');
+  nextBtn.classList.toggle('is-loading', state.isPlaybackLoading && source === 'next');
+
+  if (state.isPlaybackLoading) {
+    if (source === 'next') nextBtn.textContent = '...';
+    else playPauseBtn.textContent = '...';
+    return;
+  }
+
+  nextBtn.textContent = '⏭';
+  renderNowPlaying();
+}
+
 // ═══════════════════════════════════════════════════════
 //  PLAYBACK
 // ═══════════════════════════════════════════════════════
 function playSong(index) {
   if (index < 0 || index >= state.playlist.length) return;
+  if (!state.isPlaybackLoading) setPlaybackLoading(true, 'play');
   state.currentOrderSong = null; // Clear order song state
   state.currentIndex = index;
   const song = state.playlist[index];
@@ -2881,10 +2912,13 @@ function playSong(index) {
     window.dispatchEvent(new CustomEvent('songStarted', { detail: song }));
   }).catch(err => {
     console.warn('Autoplay blocked:', err);
+  }).finally(() => {
+    setPlaybackLoading(false);
   });
 }
 
 function playOrderSong(song) {
+  if (!state.isPlaybackLoading) setPlaybackLoading(true, 'play');
   state.currentOrderSong = song;
   audioEl.src = `/api/stream?id=${song.vid}`;
   audioEl.volume = state.volume / 100;
@@ -2902,6 +2936,8 @@ function playOrderSong(song) {
     }
   }).catch(err => {
     console.warn('Autoplay blocked:', err);
+  }).finally(() => {
+    setPlaybackLoading(false);
   });
 }
 
@@ -2910,6 +2946,8 @@ function jumpTo(index) {
 }
 
 async function playNext(skip = false) {
+  if (state.isPlaybackLoading) return;
+  setPlaybackLoading(true, 'next');
   try {
     const res = await fetch('/api/orders/next', { method: 'POST' });
     if (!res.ok) throw new Error('API Error');
@@ -2930,6 +2968,10 @@ async function playNext(skip = false) {
   }
 
   // Fallback to normal playlist
+  if (state.playlist.length === 0) {
+    setPlaybackLoading(false);
+    return;
+  }
   state.currentOrderSong = null;
   let next = state.currentIndex + 1;
   if (next >= state.playlist.length) next = 0; // loop
@@ -2963,14 +3005,20 @@ function playPrev() {
 }
 
 function togglePlayPause() {
+  if (state.isPlaybackLoading) return;
   if (state.playlist.length === 0 && !state.currentOrderSong) { toast('⚠️ Load Sheet trước đã'); return; }
   if (state.currentIndex === -1 && !state.currentOrderSong) { playNext(); return; }
 
   if (audioEl.paused) {
+    setPlaybackLoading(true, 'play');
     ensureVisualizer();
     audioEl.play().then(() => {
       state.isPlaying = true;
       renderNowPlaying();
+    }).catch(err => {
+      console.warn('Play failed:', err);
+    }).finally(() => {
+      setPlaybackLoading(false);
     });
   } else {
     audioEl.pause();
