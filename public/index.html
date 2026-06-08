@@ -3519,7 +3519,13 @@ function escapeHTML(str) {
   }
 
   // Fetch current state from server
-  fetch('/api/order-status').then(r => r.json()).then(d => setUI(d.enabled)).catch(() => {});
+  fetch('/api/order-status')
+    .then(async r => {
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setUI(d.enabled);
+    })
+    .catch(() => toast('⚠️ Không đồng bộ được trạng thái order'));
 
   // Click anywhere on the label/track toggles
   wrap.addEventListener('click', async () => {

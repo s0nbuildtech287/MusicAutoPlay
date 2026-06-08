@@ -94,7 +94,9 @@ let orderQueue = [];
 let currentPlayingUser = null;
 let consecutiveCount = 0;
 let membersList = [];
-let orderEnabled = false; // Admin toggle — off by default
+let orderEnabled = true; // Mirrored from Apps Script; default open until remote state is known.
+let orderEnabledSynced = false;
+let orderEnabledSyncPromise = null;
 const completedRemoteOrderIds = new Set();
 
 function isFallbackOrderTitle(title) {
@@ -209,11 +211,27 @@ async function syncOrderEnabledFromRemote() {
     const res = await fetch(getOrderWebAppApiUrl('status'));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    if (!data || data.ok !== true || typeof data.enabled !== 'boolean') {
+      throw new Error('Invalid order status response');
+    }
     orderEnabled = data.enabled === true;
+    orderEnabledSynced = true;
     console.log(`[Order] Synced order state from remote: ${orderEnabled ? 'ENABLED' : 'DISABLED'}`);
+    return orderEnabled;
   } catch (err) {
     console.warn('[Order] Failed to sync order state from remote:', err.message || err);
+    throw err;
   }
+}
+
+async function ensureOrderEnabledSynced() {
+  if (orderEnabledSynced) return orderEnabled;
+  if (!orderEnabledSyncPromise) {
+    orderEnabledSyncPromise = syncOrderEnabledFromRemote().finally(() => {
+      orderEnabledSyncPromise = null;
+    });
+  }
+  return orderEnabledSyncPromise;
 }
 
 async function syncRemoteOrders() {
@@ -344,14 +362,24 @@ function startServer() {
   });
 
   // API to get/set order enabled state (admin only)
-  expressApp.get('/api/order-status', (req, res) => {
-    res.json({ enabled: orderEnabled });
+  expressApp.get('/api/order-status', async (req, res) => {
+    try {
+      await ensureOrderEnabledSynced();
+      res.json({ enabled: orderEnabled, synced: true });
+    } catch (err) {
+      res.status(502).json({
+        enabled: orderEnabled,
+        synced: false,
+        error: 'Khong lay duoc trang thai order tu web app',
+      });
+    }
   });
   expressApp.post('/api/order-toggle', async (req, res) => {
     const nextEnabled = req.body.enabled === true;
     try {
       const remote = await updateRemoteOrderEnabled(nextEnabled);
       orderEnabled = nextEnabled;
+      orderEnabledSynced = true;
       console.log(`[Order] Order ${orderEnabled ? 'ENABLED' : 'DISABLED'} by admin`);
       res.json({ enabled: orderEnabled, remote });
     } catch (err) {
@@ -514,7 +542,9 @@ function startServer() {
   server = expressApp.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server started on http://0.0.0.0:${PORT} (LAN: http://${getLocalIp()}:${PORT})`);
     syncRemoteOrders();
-    syncOrderEnabledFromRemote();
+    ensureOrderEnabledSynced().catch(err => {
+      console.warn('[Order] Initial order state sync failed:', err.message || err);
+    });
     if (!remoteOrderSyncTimer) {
       remoteOrderSyncTimer = setInterval(syncRemoteOrders, 5000);
     }
