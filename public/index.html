@@ -1381,10 +1381,6 @@
             </button>
             <button class="btn btn-ghost" id="saveUrlBtn" title="Lưu URL">💾</button>
           </div>
-          <div class="sheet-row" style="margin-top:10px;">
-            <input type="text" id="orderPublicUrl" placeholder="Dán URL web app order public vào đây…" />
-            <button class="btn btn-primary" id="saveOrderPublicUrlBtn" title="Lưu link order public">💾</button>
-          </div>
         </div>
 
         <!-- Mode -->
@@ -1640,9 +1636,9 @@ const state = {
   currentOrderSong: null, // currently playing order song if any
 };
 
-const ORDER_PUBLIC_URL_KEY = 'mcp_orderPublicUrl';
 const ORDER_DISMISSED_IDS_KEY = 'lotusquant_order_dismissed_ids';
 const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
+const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbydArEA_Mrpj4Q5IP6GcQ3UJ8ruzw6pcLl6vX-mXv_ay-HLyv6xz4u0if7rFPEOTuEyzg/exec';
 
 // ═══════════════════════════════════════════════════════
 //  ELEMENTS
@@ -1650,11 +1646,9 @@ const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339Y
 const $ = id => document.getElementById(id);
 const audioEl      = $('audioEl');
 const sheetUrl     = $('sheetUrl');
-const orderPublicUrl = $('orderPublicUrl');
 const loadBtn      = $('loadBtn');
 const loadBtnText  = $('loadBtnText');
 const saveUrlBtn   = $('saveUrlBtn');
-const saveOrderPublicUrlBtn = $('saveOrderPublicUrlBtn');
 const tabRR        = $('tabRoundRobin');
 const tabBurst     = $('tabBurst');
 const burstConfig  = $('burstConfig');
@@ -3080,10 +3074,6 @@ saveUrlBtn.addEventListener('click', () => {
   toast('💾 Đã lưu URL');
 });
 
-function getSavedOrderPublicUrl() {
-  return (localStorage.getItem(ORDER_PUBLIC_URL_KEY) || '').trim();
-}
-
 function syncOrderPublicUrlBanner() {
   const orderLink = $('orderLink');
   if (!orderLink) return;
@@ -3092,7 +3082,7 @@ function syncOrderPublicUrlBanner() {
   if (copyBtn && !copyBtn.dataset.bound) {
     copyBtn.dataset.bound = '1';
     copyBtn.addEventListener('click', () => {
-      const liveLink = (orderPublicUrl?.value || getSavedOrderPublicUrl()).trim();
+      const liveLink = DEFAULT_ORDER_PUBLIC_URL.trim();
       if (!liveLink) {
         toast('⚠️ Chưa có URL để sao chép');
         return;
@@ -3103,39 +3093,21 @@ function syncOrderPublicUrlBanner() {
     });
   }
 
-  const url = (orderPublicUrl?.value || getSavedOrderPublicUrl()).trim();
+  const url = DEFAULT_ORDER_PUBLIC_URL.trim();
   if (url) {
     orderLink.href = url;
-    orderLink.textContent = url;
+    orderLink.textContent = 'Link Lotusquant Order Music';
     orderLink.title = url;
     return;
   }
 
   orderLink.removeAttribute('href');
-  orderLink.textContent = 'Chưa có URL public';
-  orderLink.title = 'Chưa có URL public';
+  orderLink.textContent = 'Chưa có link order public';
+  orderLink.title = 'Chưa có link order public';
 }
 
 function loadSavedOrderPublicUrl() {
-  if (!orderPublicUrl) return;
-  orderPublicUrl.value = getSavedOrderPublicUrl();
   syncOrderPublicUrlBanner();
-}
-
-if (saveOrderPublicUrlBtn && orderPublicUrl) {
-  saveOrderPublicUrlBtn.addEventListener('click', () => {
-    const url = orderPublicUrl.value.trim();
-    if (!url) { toast('⚠️ Chưa có URL web app public'); return; }
-    localStorage.setItem(ORDER_PUBLIC_URL_KEY, url);
-    syncOrderPublicUrlBanner();
-    toast('💾 Đã lưu link order public');
-  });
-}
-
-if (orderPublicUrl) {
-  orderPublicUrl.addEventListener('input', () => {
-    syncOrderPublicUrlBanner();
-  });
 }
 
 // ═══════════════════════════════════════════════════════
