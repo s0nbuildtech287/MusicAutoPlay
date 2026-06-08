@@ -586,6 +586,7 @@
       background: var(--accent);
       color: #fff;
       font-size: 1.4rem;
+      padding-left: 3px; /* Offset triangle icon to center */
     }
     .ctrl-btn.play-pause:hover { opacity: 0.88; }
 
@@ -890,6 +891,45 @@
     /* Order banner glow pulse */
     #orderBannerCard {
       animation: order-glow 2.8s ease-in-out infinite;
+    }
+    #orderIpWarning {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      background: rgba(120, 53, 15, 0.25);
+      color: #fde68a;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      text-shadow: none;
+    }
+    #orderIpWarning .warning-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    #orderIpWarning .warning-text {
+      min-width: 0;
+      flex: 1;
+    }
+    #orderIpWarning .warning-close {
+      border: none;
+      background: transparent;
+      color: #fde68a;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 0 0 8px;
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+    #orderIpWarning .warning-close:hover {
+      opacity: 1;
+    }
+    #orderIpWarning.is-visible {
+      display: block;
     }
     @keyframes order-glow {
       0%, 100% { box-shadow: 0 0 18px rgba(251,146,60,0.25), inset 0 0 20px rgba(251,146,60,0.06); }
@@ -1437,6 +1477,7 @@
             </div>
           </label>
         </div>
+        <div id="orderIpWarning"></div>
       </div>
 
       <!-- Order Queue Card -->
@@ -3154,21 +3195,73 @@ async function loadOrderIpInfo() {
     if (!res.ok) return;
     const data = await res.json();
     const orderLink = $('orderLink');
+    const warningEl = $('orderIpWarning');
+    const currentIp = data.ip || '';
+    const storedIp = localStorage.getItem('lotusquant_last_order_ip') || '';
+    const dismissedFor = localStorage.getItem('lotusquant_order_ip_warning_dismissed_for') || '';
+
     if (orderLink) {
-      const url = `http://${data.ip}:${data.port}/order`;
+      const url = `http://${currentIp}:${data.port}/order`;
       orderLink.href = url;
       orderLink.textContent = url;
+      orderLink.title = url;
+
+      localStorage.setItem('lotusquant_last_order_ip', currentIp);
+
+      if (warningEl) {
+        const preferredIp = data.preferredIp || '';
+        const preferredMismatch = preferredIp && !data.preferredIpFound;
+        const ipChanged = storedIp && storedIp !== currentIp;
+        const shouldSuppress = dismissedFor === currentIp;
+
+        const renderWarning = (html) => {
+          warningEl.classList.add('is-visible');
+          warningEl.dataset.currentIp = currentIp;
+          warningEl.innerHTML = `
+            <div class="warning-inner">
+              <div class="warning-text">${html}</div>
+              <button type="button" class="warning-close" aria-label="Ẩn cảnh báo" title="Ẩn cảnh báo">✕</button>
+            </div>
+          `;
+
+          const closeBtn = warningEl.querySelector('.warning-close');
+          if (closeBtn && !closeBtn.dataset.bound) {
+            closeBtn.dataset.bound = '1';
+            closeBtn.addEventListener('click', () => {
+              warningEl.classList.remove('is-visible');
+              warningEl.innerHTML = '';
+              warningEl.dataset.currentIp = '';
+              localStorage.setItem('lotusquant_order_ip_warning_dismissed_for', currentIp);
+            });
+          }
+        };
+
+        if (shouldSuppress) {
+          warningEl.classList.remove('is-visible');
+          warningEl.innerHTML = '';
+          warningEl.dataset.currentIp = currentIp;
+        } else if (preferredMismatch) {
+          renderWarning(`⚠️ IP cố định cấu hình là <strong>${escapeHTML(preferredIp)}</strong> nhưng máy hiện không dùng IP này. Đang fallback sang <strong>${escapeHTML(currentIp)}</strong>. Nếu muốn giữ IP ổn định, hãy đặt static IP hoặc DHCP reservation cho máy host.`);
+        } else if (ipChanged) {
+          renderWarning(`⚠️ IP của máy host đã đổi từ <strong>${escapeHTML(storedIp)}</strong> sang <strong>${escapeHTML(currentIp)}</strong>. Link order đã được cập nhật tự động, nhưng link cũ sẽ không còn dùng được.`);
+        } else {
+          warningEl.classList.remove('is-visible');
+          warningEl.textContent = '';
+          warningEl.dataset.currentIp = currentIp;
+        }
+      }
       
       const copyBtn = $('copyOrderUrlBtn');
       if (copyBtn) {
-        // Remove duplicate listeners if any
-        const newBtn = copyBtn.cloneNode(true);
-        copyBtn.parentNode.replaceChild(newBtn, copyBtn);
-        newBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(url).then(() => {
-            toast('📋 Đã sao chép link order!');
+        if (!copyBtn.dataset.bound) {
+          copyBtn.dataset.bound = '1';
+          copyBtn.addEventListener('click', () => {
+            const liveLink = $('orderLink')?.href || url;
+            navigator.clipboard.writeText(liveLink).then(() => {
+              toast('📋 Đã sao chép link order!');
+            });
           });
-        });
+        }
       }
     }
   } catch (err) {
@@ -3499,6 +3592,7 @@ window.addEventListener('resize', resizeVisualizer);
 
 // Load order info and start polling
 loadOrderIpInfo();
+setInterval(loadOrderIpInfo, 10000);
 updateHostOrders();
 setInterval(updateHostOrders, 3000);
 </script>

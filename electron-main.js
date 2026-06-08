@@ -13,9 +13,10 @@ function isValidVideoId(id) {
 }
 
 // Get local IPv4 address (prioritizing physical Wi-Fi/Ethernet adapters and filtering out virtual/VPN cards)
-function getLocalIp() {
+function getLocalIpInfo() {
   const interfaces = os.networkInterfaces();
   const candidates = [];
+  const preferredIp = process.env.LOTUSQUANT_HOST_IP?.trim() || process.env.PREFER_LAN_IP?.trim() || '';
 
   for (const name of Object.keys(interfaces)) {
     const nameLower = name.toLowerCase();
@@ -55,14 +56,35 @@ function getLocalIp() {
     }
   }
 
+  let chosen = null;
   if (candidates.length > 0) {
     // Sort by score descending
     candidates.sort((a, b) => b.score - a.score);
+    chosen = candidates[0].address;
     console.log('[Network] Detected IPs:', candidates.map(c => `${c.name}: ${c.address} (score: ${c.score})`).join(', '));
-    return candidates[0].address;
+  } else {
+    chosen = '127.0.0.1';
   }
 
-  return '127.0.0.1';
+  const preferredIpFound = preferredIp
+    ? candidates.some(candidate => candidate.address === preferredIp)
+    : false;
+
+  return {
+    ip: preferredIpFound ? preferredIp : chosen,
+    chosenIp: chosen,
+    preferredIp,
+    preferredIpFound,
+    candidates: candidates.map(candidate => ({
+      address: candidate.address,
+      name: candidate.name,
+      score: candidate.score
+    }))
+  };
+}
+
+function getLocalIp() {
+  return getLocalIpInfo().ip;
 }
 
 // Order state
@@ -149,7 +171,15 @@ function startServer() {
 
   // API to get local IP
   expressApp.get('/api/ip', (req, res) => {
-    res.json({ ip: getLocalIp(), port: PORT });
+    const network = getLocalIpInfo();
+    res.json({
+      ip: network.ip,
+      port: PORT,
+      chosenIp: network.chosenIp,
+      preferredIp: network.preferredIp,
+      preferredIpFound: network.preferredIpFound,
+      candidates: network.candidates
+    });
   });
 
   // API to get/set order enabled state (admin only)
