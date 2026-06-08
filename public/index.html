@@ -327,6 +327,12 @@
     }
     .sheet-row input:focus { border-color: var(--accent); }
     .sheet-row input::placeholder { color: var(--text-muted); }
+    .order-link-note {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
 
     .btn {
       display: inline-flex;
@@ -1375,6 +1381,10 @@
             </button>
             <button class="btn btn-ghost" id="saveUrlBtn" title="Lưu URL">💾</button>
           </div>
+          <div class="sheet-row" style="margin-top:10px;">
+            <input type="text" id="orderPublicUrl" placeholder="Dán URL web app order public vào đây…" />
+            <button class="btn btn-primary" id="saveOrderPublicUrlBtn" title="Lưu link order public">💾</button>
+          </div>
         </div>
 
         <!-- Mode -->
@@ -1477,7 +1487,6 @@
             </div>
           </label>
         </div>
-        <div id="orderIpWarning"></div>
       </div>
 
       <!-- Order Queue Card -->
@@ -1631,15 +1640,21 @@ const state = {
   currentOrderSong: null, // currently playing order song if any
 };
 
+const ORDER_PUBLIC_URL_KEY = 'mcp_orderPublicUrl';
+const ORDER_DISMISSED_IDS_KEY = 'lotusquant_order_dismissed_ids';
+const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
+
 // ═══════════════════════════════════════════════════════
 //  ELEMENTS
 // ═══════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 const audioEl      = $('audioEl');
 const sheetUrl     = $('sheetUrl');
+const orderPublicUrl = $('orderPublicUrl');
 const loadBtn      = $('loadBtn');
 const loadBtnText  = $('loadBtnText');
 const saveUrlBtn   = $('saveUrlBtn');
+const saveOrderPublicUrlBtn = $('saveOrderPublicUrlBtn');
 const tabRR        = $('tabRoundRobin');
 const tabBurst     = $('tabBurst');
 const burstConfig  = $('burstConfig');
@@ -3065,6 +3080,64 @@ saveUrlBtn.addEventListener('click', () => {
   toast('💾 Đã lưu URL');
 });
 
+function getSavedOrderPublicUrl() {
+  return (localStorage.getItem(ORDER_PUBLIC_URL_KEY) || '').trim();
+}
+
+function syncOrderPublicUrlBanner() {
+  const orderLink = $('orderLink');
+  if (!orderLink) return;
+
+  const copyBtn = $('copyOrderUrlBtn');
+  if (copyBtn && !copyBtn.dataset.bound) {
+    copyBtn.dataset.bound = '1';
+    copyBtn.addEventListener('click', () => {
+      const liveLink = (orderPublicUrl?.value || getSavedOrderPublicUrl()).trim();
+      if (!liveLink) {
+        toast('⚠️ Chưa có URL để sao chép');
+        return;
+      }
+      navigator.clipboard.writeText(liveLink).then(() => {
+        toast('📋 Đã sao chép link order!');
+      });
+    });
+  }
+
+  const url = (orderPublicUrl?.value || getSavedOrderPublicUrl()).trim();
+  if (url) {
+    orderLink.href = url;
+    orderLink.textContent = url;
+    orderLink.title = url;
+    return;
+  }
+
+  orderLink.removeAttribute('href');
+  orderLink.textContent = 'Chưa có URL public';
+  orderLink.title = 'Chưa có URL public';
+}
+
+function loadSavedOrderPublicUrl() {
+  if (!orderPublicUrl) return;
+  orderPublicUrl.value = getSavedOrderPublicUrl();
+  syncOrderPublicUrlBanner();
+}
+
+if (saveOrderPublicUrlBtn && orderPublicUrl) {
+  saveOrderPublicUrlBtn.addEventListener('click', () => {
+    const url = orderPublicUrl.value.trim();
+    if (!url) { toast('⚠️ Chưa có URL web app public'); return; }
+    localStorage.setItem(ORDER_PUBLIC_URL_KEY, url);
+    syncOrderPublicUrlBanner();
+    toast('💾 Đã lưu link order public');
+  });
+}
+
+if (orderPublicUrl) {
+  orderPublicUrl.addEventListener('input', () => {
+    syncOrderPublicUrlBanner();
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 //  MODE CONTROLS
 // ═══════════════════════════════════════════════════════
@@ -3126,15 +3199,68 @@ startBtn.addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════
 let hostOrders = [];
 
+function getOrdersCsvUrl() {
+  const sep = ORDERS_CSV_URL.includes('?') ? '&' : '?';
+  return `${ORDERS_CSV_URL}${sep}t=${Date.now()}`;
+}
+
+function getDismissedOrderIds() {
+  try {
+    const raw = localStorage.getItem(ORDER_DISMISSED_IDS_KEY) || '[]';
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissedOrderIds(set) {
+  localStorage.setItem(ORDER_DISMISSED_IDS_KEY, JSON.stringify([...set]));
+}
+
+function csvRowsToOrders(rows) {
+  if (!rows.length) return [];
+
+  const header = rows[0].map(cell => String(cell || '').trim().toLowerCase());
+  const hasHeader = header.includes('id') && header.includes('name') && header.includes('title');
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+
+  return dataRows.map(row => ({
+    id: String(row[0] || '').trim(),
+    timestamp: String(row[1] || '').trim(),
+    status: String(row[2] || 'pending').trim().toLowerCase(),
+    name: String(row[3] || '').trim(),
+    url: String(row[4] || '').trim(),
+    vid: String(row[5] || '').trim(),
+    title: String(row[6] || '').trim(),
+    note: String(row[7] || '').trim(),
+  })).filter(item => item.id || item.name || item.title);
+}
+
 async function updateHostOrders() {
+  try {
+    const res = await fetch(getOrdersCsvUrl(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const text = await res.text();
+    const rows = csvToRows(text).filter(row => row.length >= 1);
+    const dismissed = getDismissedOrderIds();
+    hostOrders = csvRowsToOrders(rows).filter(item => !dismissed.has(item.id) && item.status !== 'done');
+    renderHostOrders();
+    return;
+  } catch (err) {
+    console.warn('Failed to poll public order feed:', err);
+  }
+
   try {
     const res = await fetch('/api/orders');
     if (!res.ok) return;
     const data = await res.json();
-    hostOrders = data.orders;
+    const dismissed = getDismissedOrderIds();
+    hostOrders = (data.orders || []).filter(item => !dismissed.has(String(item.id || '')));
     renderHostOrders();
   } catch (err) {
-    console.warn('Failed to poll host orders:', err);
+    console.warn('Failed to poll fallback host orders:', err);
   }
 }
 
@@ -3142,9 +3268,9 @@ function renderHostOrders() {
   const container = $('hostOrderList');
   const countEl = $('hostOrderCount');
   if (!container || !countEl) return;
-  
+
   countEl.textContent = hostOrders.length;
-  
+
   if (hostOrders.length === 0) {
     container.innerHTML = `
       <div class="empty-playlist">
@@ -3153,144 +3279,32 @@ function renderHostOrders() {
       </div>`;
     return;
   }
-  
-  container.innerHTML = hostOrders.map((item, index) => `
-    <div class="pl-item" style="justify-content: space-between;">
-      <div class="pl-num">${index + 1}</div>
-      <div class="pl-info" style="flex: 1; margin-right: 12px;">
-        <div class="pl-name" style="font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(item.title)}</div>
-        <div class="pl-sub" style="font-size: 0.72rem; color: #fb923c;">Người gửi: <strong>${escapeHTML(item.name)}</strong></div>
+
+  container.innerHTML = hostOrders.map((item, index) => {
+    const displayTitle = item.title || item.url || 'Yêu cầu nhạc';
+    return `
+      <div class="pl-item" style="justify-content: space-between;">
+        <div class="pl-num">${index + 1}</div>
+        <div class="pl-info" style="flex: 1; margin-right: 12px;">
+          <div class="pl-name" style="font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(displayTitle)}</div>
+          <div class="pl-sub" style="font-size: 0.72rem; color: #fb923c;">Người gửi: <strong>${escapeHTML(item.name || 'Ẩn danh')}</strong></div>
+        </div>
+        <button class="btn btn-ghost" onclick="removeOrder('${escapeHTML(item.id)}', event)" style="padding: 4px 8px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: #f87171; background: transparent; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s;">Xóa</button>
       </div>
-      <button class="btn btn-ghost" onclick="removeOrder('${item.id}', event)" style="padding: 4px 8px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: #f87171; background: transparent; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s;">Xóa</button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-async function removeOrder(id, event) {
+function removeOrder(id, event) {
   if (event) event.stopPropagation();
-  if (!confirm('Bạn có chắc chắn muốn xóa yêu cầu này?')) return;
-  
-  try {
-    const res = await fetch('/api/orders/remove', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      toast('✅ Đã xóa yêu cầu');
-      updateHostOrders();
-    } else {
-      toast(`❌ Lỗi: ${data.error}`);
-    }
-  } catch (err) {
-    console.error(err);
-    toast('❌ Lỗi kết nối API');
-  }
-}
+  if (!confirm('Bạn có chắc chắn muốn ẩn yêu cầu này khỏi hàng đợi?')) return;
 
-async function loadOrderIpInfo() {
-  try {
-    const res = await fetch('/api/ip');
-    if (!res.ok) return;
-    const data = await res.json();
-    const orderLink = $('orderLink');
-    const warningEl = $('orderIpWarning');
-    const currentIp = data.ip || '';
-    const storedIp = localStorage.getItem('lotusquant_last_order_ip') || '';
-    const dismissedFor = localStorage.getItem('lotusquant_order_ip_warning_dismissed_for') || '';
-    const activeWarningRaw = localStorage.getItem('lotusquant_order_ip_warning_active');
-    const activeWarning = activeWarningRaw ? (() => {
-      try { return JSON.parse(activeWarningRaw); } catch { return null; }
-    })() : null;
-
-    if (orderLink) {
-      const url = `http://${currentIp}:${data.port}/order`;
-      orderLink.href = url;
-      orderLink.textContent = url;
-      orderLink.title = url;
-
-      localStorage.setItem('lotusquant_last_order_ip', currentIp);
-
-      if (warningEl) {
-        const preferredIp = data.preferredIp || '';
-        const preferredMismatch = preferredIp && !data.preferredIpFound;
-        const ipChanged = storedIp && storedIp !== currentIp;
-        let warningHtml = '';
-        let warningKey = '';
-
-        if (preferredMismatch) {
-          warningKey = `preferred:${preferredIp}`;
-          warningHtml = `⚠️ IP cố định cấu hình là <strong>${escapeHTML(preferredIp)}</strong> nhưng máy hiện không dùng IP này. Đang fallback sang <strong>${escapeHTML(currentIp)}</strong>. Nếu muốn giữ IP ổn định, hãy đặt static IP hoặc DHCP reservation cho máy host.`;
-        } else if (ipChanged) {
-          warningKey = `ip:${currentIp}`;
-          warningHtml = `⚠️ IP của máy host đã đổi từ <strong>${escapeHTML(storedIp)}</strong> sang <strong>${escapeHTML(currentIp)}</strong>. Link order đã được cập nhật tự động, nhưng link cũ sẽ không còn dùng được.`;
-        } else if (activeWarning && activeWarning.ip === currentIp && activeWarning.html) {
-          warningKey = activeWarning.key || `ip:${currentIp}`;
-          warningHtml = activeWarning.html;
-        }
-
-        const renderWarning = (html, key) => {
-          warningEl.classList.add('is-visible');
-          warningEl.dataset.currentIp = currentIp;
-          warningEl.innerHTML = `
-            <div class="warning-inner">
-              <div class="warning-text">${html}</div>
-              <button type="button" class="warning-close" aria-label="Ẩn cảnh báo" title="Ẩn cảnh báo">✕</button>
-            </div>
-          `;
-
-          const closeBtn = warningEl.querySelector('.warning-close');
-          if (closeBtn && !closeBtn.dataset.bound) {
-            closeBtn.dataset.bound = '1';
-            closeBtn.addEventListener('click', () => {
-              warningEl.classList.remove('is-visible');
-              warningEl.innerHTML = '';
-              warningEl.dataset.currentIp = '';
-              localStorage.setItem('lotusquant_order_ip_warning_dismissed_for', currentIp);
-              localStorage.removeItem('lotusquant_order_ip_warning_active');
-            });
-          }
-
-          localStorage.setItem('lotusquant_order_ip_warning_active', JSON.stringify({
-            ip: currentIp,
-            key,
-            html,
-          }));
-        };
-
-        if (dismissedFor === currentIp) {
-          warningEl.classList.remove('is-visible');
-          warningEl.innerHTML = '';
-          warningEl.dataset.currentIp = currentIp;
-        } else if (warningHtml) {
-          renderWarning(warningHtml, warningKey);
-        } else if (activeWarning && activeWarning.ip === currentIp) {
-          renderWarning(activeWarning.html, activeWarning.key || `ip:${currentIp}`);
-        } else {
-          warningEl.classList.remove('is-visible');
-          warningEl.innerHTML = '';
-          warningEl.dataset.currentIp = currentIp;
-          localStorage.removeItem('lotusquant_order_ip_warning_active');
-        }
-      }
-      
-      const copyBtn = $('copyOrderUrlBtn');
-      if (copyBtn) {
-        if (!copyBtn.dataset.bound) {
-          copyBtn.dataset.bound = '1';
-          copyBtn.addEventListener('click', () => {
-            const liveLink = $('orderLink')?.href || url;
-            navigator.clipboard.writeText(liveLink).then(() => {
-              toast('📋 Đã sao chép link order!');
-            });
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to get local IP info:', err);
-  }
+  const dismissed = getDismissedOrderIds();
+  dismissed.add(String(id));
+  saveDismissedOrderIds(dismissed);
+  hostOrders = hostOrders.filter(item => String(item.id) !== String(id));
+  renderHostOrders();
+  toast('✅ Đã ẩn yêu cầu khỏi hàng đợi');
 }
 
 function escapeHTML(str) {
@@ -3615,8 +3629,7 @@ if (visualizerCtx && !visualizerRaf) {
 window.addEventListener('resize', resizeVisualizer);
 
 // Load order info and start polling
-loadOrderIpInfo();
-setInterval(loadOrderIpInfo, 10000);
+loadSavedOrderPublicUrl();
 updateHostOrders();
 setInterval(updateHostOrders, 3000);
 </script>
