@@ -3199,6 +3199,10 @@ async function loadOrderIpInfo() {
     const currentIp = data.ip || '';
     const storedIp = localStorage.getItem('lotusquant_last_order_ip') || '';
     const dismissedFor = localStorage.getItem('lotusquant_order_ip_warning_dismissed_for') || '';
+    const activeWarningRaw = localStorage.getItem('lotusquant_order_ip_warning_active');
+    const activeWarning = activeWarningRaw ? (() => {
+      try { return JSON.parse(activeWarningRaw); } catch { return null; }
+    })() : null;
 
     if (orderLink) {
       const url = `http://${currentIp}:${data.port}/order`;
@@ -3212,9 +3216,21 @@ async function loadOrderIpInfo() {
         const preferredIp = data.preferredIp || '';
         const preferredMismatch = preferredIp && !data.preferredIpFound;
         const ipChanged = storedIp && storedIp !== currentIp;
-        const shouldSuppress = dismissedFor === currentIp;
+        let warningHtml = '';
+        let warningKey = '';
 
-        const renderWarning = (html) => {
+        if (preferredMismatch) {
+          warningKey = `preferred:${preferredIp}`;
+          warningHtml = `⚠️ IP cố định cấu hình là <strong>${escapeHTML(preferredIp)}</strong> nhưng máy hiện không dùng IP này. Đang fallback sang <strong>${escapeHTML(currentIp)}</strong>. Nếu muốn giữ IP ổn định, hãy đặt static IP hoặc DHCP reservation cho máy host.`;
+        } else if (ipChanged) {
+          warningKey = `ip:${currentIp}`;
+          warningHtml = `⚠️ IP của máy host đã đổi từ <strong>${escapeHTML(storedIp)}</strong> sang <strong>${escapeHTML(currentIp)}</strong>. Link order đã được cập nhật tự động, nhưng link cũ sẽ không còn dùng được.`;
+        } else if (activeWarning && activeWarning.ip === currentIp && activeWarning.html) {
+          warningKey = activeWarning.key || `ip:${currentIp}`;
+          warningHtml = activeWarning.html;
+        }
+
+        const renderWarning = (html, key) => {
           warningEl.classList.add('is-visible');
           warningEl.dataset.currentIp = currentIp;
           warningEl.innerHTML = `
@@ -3232,22 +3248,30 @@ async function loadOrderIpInfo() {
               warningEl.innerHTML = '';
               warningEl.dataset.currentIp = '';
               localStorage.setItem('lotusquant_order_ip_warning_dismissed_for', currentIp);
+              localStorage.removeItem('lotusquant_order_ip_warning_active');
             });
           }
+
+          localStorage.setItem('lotusquant_order_ip_warning_active', JSON.stringify({
+            ip: currentIp,
+            key,
+            html,
+          }));
         };
 
-        if (shouldSuppress) {
+        if (dismissedFor === currentIp) {
           warningEl.classList.remove('is-visible');
           warningEl.innerHTML = '';
           warningEl.dataset.currentIp = currentIp;
-        } else if (preferredMismatch) {
-          renderWarning(`⚠️ IP cố định cấu hình là <strong>${escapeHTML(preferredIp)}</strong> nhưng máy hiện không dùng IP này. Đang fallback sang <strong>${escapeHTML(currentIp)}</strong>. Nếu muốn giữ IP ổn định, hãy đặt static IP hoặc DHCP reservation cho máy host.`);
-        } else if (ipChanged) {
-          renderWarning(`⚠️ IP của máy host đã đổi từ <strong>${escapeHTML(storedIp)}</strong> sang <strong>${escapeHTML(currentIp)}</strong>. Link order đã được cập nhật tự động, nhưng link cũ sẽ không còn dùng được.`);
+        } else if (warningHtml) {
+          renderWarning(warningHtml, warningKey);
+        } else if (activeWarning && activeWarning.ip === currentIp) {
+          renderWarning(activeWarning.html, activeWarning.key || `ip:${currentIp}`);
         } else {
           warningEl.classList.remove('is-visible');
-          warningEl.textContent = '';
+          warningEl.innerHTML = '';
           warningEl.dataset.currentIp = currentIp;
+          localStorage.removeItem('lotusquant_order_ip_warning_active');
         }
       }
       
