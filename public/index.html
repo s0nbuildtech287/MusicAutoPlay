@@ -2743,11 +2743,12 @@ function toggleMember(name, chipEl, event) {
 function renderNowPlaying() {
   if (state.currentOrderSong) {
     const song = state.currentOrderSong;
+    const displayTitle = isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title;
     const memberPhoto = `/people/${song.name}.jpg`;
     npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png'" />`;
     npContent.innerHTML = `
       <p class="np-member" style="color:#fb923c">📱 Yêu cầu bởi: ${song.name}</p>
-      <p class="np-title">${song.title}</p>
+      <p class="np-title">${displayTitle}</p>
       <p class="np-artist">🎤 YouTube Stream</p>
     `;
     progressArea.style.display = 'block';
@@ -2773,7 +2774,7 @@ function renderNowPlaying() {
 
   npContent.innerHTML = `
     <p class="np-member">👤 ${song.name}</p>
-    <p class="np-title">${song.title}</p>
+    <p class="np-title">${isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title}</p>
     <p class="np-artist">🎤 ${song.artist}</p>
   `;
   progressArea.style.display = 'block';
@@ -3265,6 +3266,11 @@ function getOrdersCsvUrl() {
   return `${ORDERS_CSV_URL}${sep}t=${Date.now()}`;
 }
 
+function getOrdersApiUrl() {
+  const sep = DEFAULT_ORDER_PUBLIC_URL.includes('?') ? '&' : '?';
+  return `${DEFAULT_ORDER_PUBLIC_URL}${sep}action=list&t=${Date.now()}`;
+}
+
 function getDismissedOrderIds() {
   try {
     const raw = localStorage.getItem(ORDER_DISMISSED_IDS_KEY) || '[]';
@@ -3300,29 +3306,34 @@ function csvRowsToOrders(rows) {
 
 async function updateHostOrders() {
   try {
-    const res = await fetch(getOrdersCsvUrl(), { cache: 'no-store' });
+    const res = await fetch(getOrdersApiUrl(), { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+    const data = await res.json();
+    const dismissed = getDismissedOrderIds();
+    hostOrders = (data.orders || []).filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
+    renderHostOrders();
+    return;
+  } catch (err) {
+    console.warn('Failed to poll public order API:', err);
+  }
+
+  try {
+    const res = await fetch(getOrdersCsvUrl(), { cache: 'no-store' });
+    if (!res.ok) return;
     const text = await res.text();
     const rows = csvToRows(text).filter(row => row.length >= 1);
     const dismissed = getDismissedOrderIds();
     hostOrders = csvRowsToOrders(rows).filter(item => !dismissed.has(item.id) && item.status !== 'done');
     renderHostOrders();
-    return;
   } catch (err) {
-    console.warn('Failed to poll public order feed:', err);
+    console.warn('Failed to poll fallback public CSV feed:', err);
   }
+}
 
-  try {
-    const res = await fetch('/api/orders');
-    if (!res.ok) return;
-    const data = await res.json();
-    const dismissed = getDismissedOrderIds();
-    hostOrders = (data.orders || []).filter(item => !dismissed.has(String(item.id || '')));
-    renderHostOrders();
-  } catch (err) {
-    console.warn('Failed to poll fallback host orders:', err);
-  }
+function isFallbackOrderTitle(title) {
+  const text = String(title || '').trim();
+  return !text || /^Y[eê]u c[aả]u nh[aạ]c/i.test(text) || /^Đang tải thông tin bài hát/i.test(text);
 }
 
 function renderHostOrders() {
@@ -3342,7 +3353,7 @@ function renderHostOrders() {
   }
 
   container.innerHTML = hostOrders.map((item, index) => {
-    const displayTitle = item.title || item.url || 'Yêu cầu nhạc';
+    const displayTitle = isFallbackOrderTitle(item.title) ? 'Đang tải tên bài hát...' : (item.title || item.url || 'Yêu cầu nhạc');
     return `
       <div class="pl-item" style="justify-content: space-between;">
         <div class="pl-num">${index + 1}</div>

@@ -21,6 +21,22 @@ function doGet(e) {
     return jsonOutput_({ ok: true, orders: listOrders_() });
   }
 
+  if (action === 'done') {
+    const id = e && e.parameter && e.parameter.id ? String(e.parameter.id).trim() : '';
+    if (!id) return jsonOutput_({ ok: false, error: 'Missing id' });
+    const result = markOrderDone_(id);
+    return jsonOutput_(result);
+  }
+
+  if (action === 'title') {
+    const id = e && e.parameter && e.parameter.id ? String(e.parameter.id).trim() : '';
+    const title = e && e.parameter && e.parameter.title ? String(e.parameter.title).trim() : '';
+    if (!id) return jsonOutput_({ ok: false, error: 'Missing id' });
+    if (!title) return jsonOutput_({ ok: false, error: 'Missing title' });
+    const result = updateOrderTitle_(id, title);
+    return jsonOutput_(result);
+  }
+
   return renderOrderPage_();
 }
 
@@ -105,8 +121,7 @@ function listOrders_() {
 
   return values
     .slice(1)
-    .filter(row => row[0] || row[3] || row[4])
-    .map(row => ({
+    .map((row, idx) => ({
       id: String(row[0] || '').trim(),
       timestamp: row[1] ? new Date(row[1]).toISOString() : '',
       status: String(row[2] || 'pending').trim().toLowerCase(),
@@ -115,7 +130,43 @@ function listOrders_() {
       vid: String(row[5] || '').trim(),
       title: String(row[6] || '').trim(),
       note: String(row[7] || '').trim(),
-    }));
+      rowNumber: idx + 2,
+    }))
+    .filter(row => row.id || row.name || row.url || row.title);
+}
+
+function markOrderDone_(id) {
+  const sheet = getOrdersSheet_();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { ok: false, error: 'No rows' };
+
+  const targetId = String(id || '').trim();
+  for (let i = 1; i < values.length; i++) {
+    const rowId = String(values[i][0] || '').trim();
+    if (rowId !== targetId) continue;
+    sheet.getRange(i + 1, 3).setValue('done');
+    sheet.getRange(i + 1, 8).setValue(`done:${new Date().toISOString()}`);
+    return { ok: true, id: targetId };
+  }
+
+  return { ok: false, error: 'Order not found', id: targetId };
+}
+
+function updateOrderTitle_(id, title) {
+  const sheet = getOrdersSheet_();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { ok: false, error: 'No rows' };
+
+  const targetId = String(id || '').trim();
+  const cleanTitle = String(title || '').trim();
+  for (let i = 1; i < values.length; i++) {
+    const rowId = String(values[i][0] || '').trim();
+    if (rowId !== targetId) continue;
+    sheet.getRange(i + 1, 7).setValue(cleanTitle);
+    return { ok: true, id: targetId, title: cleanTitle };
+  }
+
+  return { ok: false, error: 'Order not found', id: targetId };
 }
 
 function listMemberNames_() {
@@ -202,6 +253,38 @@ function fetchYouTubeTitle_(vid) {
   } catch (err) {
     console.warn('Failed to fetch title:', err);
   }
+
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(vid)}`;
+    const res = UrlFetchApp.fetch(watchUrl, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
+      },
+    });
+    if (res.getResponseCode() >= 200 && res.getResponseCode() < 300) {
+      const html = res.getContentText();
+      const patterns = [
+        /<meta property="og:title" content="([^"]+)"/i,
+        /<meta name="title" content="([^"]+)"/i,
+        /"title":"([^"]+)"/i,
+      ];
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          return String(match[1])
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&')
+            .trim();
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to scrape YouTube title:', err);
+  }
+
   return `Yeu cau nhac (${vid})`;
 }
 
@@ -363,17 +446,17 @@ function getOrderPageHtml_() {
     "    }",
     "",
     "    function renderQueue(orders) {",
-    "      const latest = (orders || []).slice(-8).reverse();",
+    "      const latest = (orders || []).filter(o => String(o.status || 'pending').toLowerCase() !== 'done').slice(-8).reverse();",
     "      queue.innerHTML = latest.length ? latest.map(o => `",
     "        <div class=\"item\">",
     "          <div class=\"top\">",
     "            <div>",
-    "              <div class=\"name\">${escapeHtml(o.name || '')}</div>",
+    "              <div class=\"name\">#${escapeHtml(o.rowNumber || '')} ${escapeHtml(o.name || '')}</div>",
     "              <div class=\"meta\">${escapeHtml(o.timestamp || '')}</div>",
     "            </div>",
     "            <div class=\"meta\">${escapeHtml(o.status || 'pending')}</div>",
     "          </div>",
-    "          <div class=\"title\">${escapeHtml(o.title || 'Đang chờ xử lý')}</div>",
+    "          <div class=\"title\">${escapeHtml((o.title && !/^Y[eê]u c[aả]u nh[aạ]c/i.test(String(o.title))) ? o.title : 'Đang tải tên bài hát...')}</div>",
     "        </div>",
     "      `).join('') : '<div class=\"small\">Chưa có order nào.</div>';",
     "    }",

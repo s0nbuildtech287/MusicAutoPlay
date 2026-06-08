@@ -6,6 +6,8 @@ const os = require('os');
 
 let mainWindow;
 let server;
+let remoteOrderSyncTimer;
+const ORDER_WEBAPP_URL = process.env.LOTUSQUANT_ORDER_WEBAPP_URL?.trim() || 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwDlkhy4CMDBXIwR7vUcyRV2sdjv4cwO-BalyxC0QhMZOIMp1MX4w7Qdj3H700tSEclxw/exec';
 
 // Validate YouTube video ID
 function isValidVideoId(id) {
@@ -93,6 +95,125 @@ let currentPlayingUser = null;
 let consecutiveCount = 0;
 let membersList = [];
 let orderEnabled = false; // Admin toggle — off by default
+const completedRemoteOrderIds = new Set();
+
+function isFallbackOrderTitle(title) {
+  const text = String(title || '').trim();
+  return !text || /^Y[eê]u c[aầ]u nh[aạ]c/i.test(text) || /^Đang tải thông tin bài hát/i.test(text);
+}
+
+function resolveTitleWithYtDlp(cleanUrl, vid) {
+  return new Promise((resolve) => {
+    const isWindows = os.platform() === 'win32';
+    const ytdlpPath = path.join(__dirname, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
+    const { execFile } = require('child_process');
+
+    execFile(ytdlpPath, ['--encoding', 'utf-8', '--js-runtimes', 'node', '--get-title', cleanUrl], { encoding: 'utf8' }, (err, stdout) => {
+      if (!err && stdout && stdout.trim()) {
+        return resolve(stdout.trim());
+      }
+      console.error('[Queue] Get title error:', err && err.message ? err.message : err);
+      resolve(`Yeu cau nhac (${vid})`);
+    });
+  });
+}
+
+function getOrderWebAppApiUrl(action, params = {}) {
+  const url = new URL(ORDER_WEBAPP_URL);
+  url.searchParams.set('action', action);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  url.searchParams.set('t', String(Date.now()));
+  return url.toString();
+}
+
+function normalizeOrderTimestamp(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
+function normalizeRemoteOrder(order) {
+  const timestamp = order.timestamp || order.createdAt || '';
+  return {
+    id: String(order.id || '').trim(),
+    name: String(order.name || '').trim(),
+    url: String(order.url || '').trim(),
+    vid: String(order.vid || '').trim(),
+    title: String(order.title || '').trim(),
+    status: String(order.status || 'pending').trim().toLowerCase(),
+    note: String(order.note || '').trim(),
+    timestamp,
+    timestampMs: normalizeOrderTimestamp(timestamp),
+    source: 'webapp',
+  };
+}
+
+function normalizeLocalOrder(order) {
+  return {
+    ...order,
+    source: 'local',
+    timestampMs: normalizeOrderTimestamp(order.timestamp),
+  };
+}
+
+async function markRemoteOrderDone(orderId) {
+  try {
+    await fetch(getOrderWebAppApiUrl('done', { id: orderId }));
+  } catch (err) {
+    console.warn('[Orders] Failed to mark remote order done:', err.message || err);
+  }
+}
+
+async function updateRemoteOrderTitle(orderId, title) {
+  try {
+    await fetch(getOrderWebAppApiUrl('title', { id: orderId, title }));
+  } catch (err) {
+    console.warn('[Orders] Failed to update remote order title:', err.message || err);
+  }
+}
+
+async function syncRemoteOrders() {
+  try {
+    const res = await fetch(getOrderWebAppApiUrl('list'));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const remoteOrders = Array.isArray(data.orders) ? data.orders : [];
+    const pendingRemoteOrders = remoteOrders
+      .filter(order => String(order.status || 'pending').trim().toLowerCase() !== 'done')
+      .map(normalizeRemoteOrder)
+      .filter(order => order.id && !completedRemoteOrderIds.has(order.id));
+
+    const localOrders = orderQueue.filter(order => order.source !== 'webapp').map(normalizeLocalOrder);
+    const localIds = new Set(localOrders.map(order => order.id));
+    const mergedRemoteOrders = pendingRemoteOrders.filter(order => !localIds.has(order.id));
+
+    orderQueue = [...localOrders, ...mergedRemoteOrders].sort((a, b) => a.timestampMs - b.timestampMs);
+
+    for (const order of orderQueue) {
+      if (order.source !== 'webapp') continue;
+      if (!isFallbackOrderTitle(order.title)) continue;
+      if (!order.url || !order.vid) continue;
+
+      const targetId = order.id;
+      const cleanUrl = order.url;
+      resolveTitleWithYtDlp(cleanUrl, order.vid).then((title) => {
+        const idx = orderQueue.findIndex(item => item.id === targetId);
+        if (idx !== -1 && isFallbackOrderTitle(orderQueue[idx].title)) {
+          orderQueue[idx].title = title;
+          console.log(`[Orders] Resolved remote title for ${targetId}: ${title}`);
+          updateRemoteOrderTitle(targetId, title);
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[Orders] Remote sync failed:', err.message || err);
+  }
+}
 
 // Start Express server inside Electron
 function startServer() {
@@ -225,7 +346,9 @@ function startServer() {
       url: cleanUrl,
       vid: vid,
       title: 'Đang tải thông tin bài hát...',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      timestampMs: Date.now(),
+      source: 'local',
     };
 
     orderQueue.push(newOrder);
@@ -260,7 +383,9 @@ function startServer() {
   });
 
   // API to pop and get next order (Round Robin, max 2 consecutive per user)
-  expressApp.post('/api/orders/next', (req, res) => {
+  expressApp.post('/api/orders/next', async (req, res) => {
+    await syncRemoteOrders();
+
     if (orderQueue.length === 0) {
       return res.json({ nextSong: null });
     }
@@ -278,7 +403,21 @@ function startServer() {
     }
 
     const nextSong = orderQueue[selectedIndex];
+    if (nextSong && nextSong.source === 'webapp' && isFallbackOrderTitle(nextSong.title) && nextSong.url && nextSong.vid) {
+      const resolvedTitle = await resolveTitleWithYtDlp(nextSong.url, nextSong.vid);
+      nextSong.title = resolvedTitle;
+      const idx = orderQueue.findIndex(item => item.id === nextSong.id);
+      if (idx !== -1) {
+        orderQueue[idx].title = resolvedTitle;
+      }
+      updateRemoteOrderTitle(nextSong.id, resolvedTitle);
+    }
     orderQueue.splice(selectedIndex, 1);
+
+    if (nextSong && nextSong.source === 'webapp') {
+      completedRemoteOrderIds.add(nextSong.id);
+      markRemoteOrderDone(nextSong.id);
+    }
 
     // Update scheduling tracker
     if (currentPlayingUser && currentPlayingUser.toLowerCase() === nextSong.name.toLowerCase()) {
@@ -292,14 +431,20 @@ function startServer() {
   });
 
   // API to remove an order (for host admin management)
-  expressApp.post('/api/orders/remove', (req, res) => {
+  expressApp.post('/api/orders/remove', async (req, res) => {
     const { id } = req.body;
     if (!id) {
       return res.status(400).json({ error: 'Thiếu ID bài hát cần xóa!' });
     }
 
     const originalLen = orderQueue.length;
+    const removedRemote = orderQueue.find(item => item.id === id && item.source === 'webapp');
     orderQueue = orderQueue.filter(item => item.id !== id);
+
+    if (removedRemote) {
+      completedRemoteOrderIds.add(removedRemote.id);
+      await markRemoteOrderDone(removedRemote.id);
+    }
 
     if (orderQueue.length === originalLen) {
       return res.status(404).json({ error: 'Không tìm thấy bài hát trong danh sách chờ!' });
@@ -310,6 +455,10 @@ function startServer() {
 
   server = expressApp.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server started on http://0.0.0.0:${PORT} (LAN: http://${getLocalIp()}:${PORT})`);
+    syncRemoteOrders();
+    if (!remoteOrderSyncTimer) {
+      remoteOrderSyncTimer = setInterval(syncRemoteOrders, 5000);
+    }
   }).on('error', (err) => {
     console.error('❌ Server error:', err.message);
   });
@@ -367,6 +516,7 @@ app.on('ready', () => {
 });
 
 app.on('window-all-closed', () => {
+  if (remoteOrderSyncTimer) clearInterval(remoteOrderSyncTimer);
   if (server) server.close();
   app.quit();
 });
