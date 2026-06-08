@@ -7,7 +7,7 @@ const os = require('os');
 let mainWindow;
 let server;
 let remoteOrderSyncTimer;
-const ORDER_WEBAPP_URL = process.env.LOTUSQUANT_ORDER_WEBAPP_URL?.trim() || 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwDlkhy4CMDBXIwR7vUcyRV2sdjv4cwO-BalyxC0QhMZOIMp1MX4w7Qdj3H700tSEclxw/exec';
+const ORDER_WEBAPP_URL = process.env.LOTUSQUANT_ORDER_WEBAPP_URL?.trim() || 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwAsOw2a06EFmdCxuOiW9gYK_mxwbMq_C2zHQ_cgfA-ptzSEploU_deM_OiRcZkS-3QPg/exec';
 
 // Validate YouTube video ID
 function isValidVideoId(id) {
@@ -162,7 +162,9 @@ function normalizeLocalOrder(order) {
 
 async function markRemoteOrderDone(orderId) {
   try {
-    await fetch(getOrderWebAppApiUrl('done', { id: orderId }));
+    const res = await fetch(getOrderWebAppApiUrl('done', { id: orderId }));
+    const body = await res.text();
+    console.log(`[Orders] mark done ${orderId}: HTTP ${res.status} ${body}`);
   } catch (err) {
     console.warn('[Orders] Failed to mark remote order done:', err.message || err);
   }
@@ -170,7 +172,9 @@ async function markRemoteOrderDone(orderId) {
 
 async function updateRemoteOrderTitle(orderId, title) {
   try {
-    await fetch(getOrderWebAppApiUrl('title', { id: orderId, title }));
+    const res = await fetch(getOrderWebAppApiUrl('title', { id: orderId, title }));
+    const body = await res.text();
+    console.log(`[Orders] update title ${orderId}: HTTP ${res.status} ${body}`);
   } catch (err) {
     console.warn('[Orders] Failed to update remote order title:', err.message || err);
   }
