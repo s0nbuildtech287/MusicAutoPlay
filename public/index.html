@@ -3262,6 +3262,7 @@ startBtn.addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════
 let hostOrders = [];
 let orderTitleCache = loadOrderTitleCache();
+let hostOrdersSnapshot = '';
 
 function getOrdersCsvUrl() {
   const sep = ORDERS_CSV_URL.includes('?') ? '&' : '?';
@@ -3326,6 +3327,17 @@ function applyCachedOrderTitle(item) {
   return next;
 }
 
+function buildOrdersSnapshot(orders) {
+  return (orders || [])
+    .map(item => [
+      String(item.id || ''),
+      String(item.status || ''),
+      String(item.name || ''),
+      String(item.title || ''),
+    ].join('|'))
+    .join('||');
+}
+
 function csvRowsToOrders(rows) {
   if (!rows.length) return [];
 
@@ -3352,9 +3364,13 @@ async function updateHostOrders() {
 
     const data = await res.json();
     const dismissed = getDismissedOrderIds();
-    hostOrders = (data.orders || [])
+    const nextOrders = (data.orders || [])
       .map(applyCachedOrderTitle)
       .filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
+    const nextSnapshot = buildOrdersSnapshot(nextOrders);
+    if (nextSnapshot === hostOrdersSnapshot) return;
+    hostOrders = nextOrders;
+    hostOrdersSnapshot = nextSnapshot;
     renderHostOrders();
     return;
   } catch (err) {
@@ -3366,9 +3382,13 @@ async function updateHostOrders() {
     if (!res.ok) return;
     const dismissed = getDismissedOrderIds();
     const data = await res.json();
-    hostOrders = (data.orders || [])
+    const nextOrders = (data.orders || [])
       .map(applyCachedOrderTitle)
       .filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
+    const nextSnapshot = buildOrdersSnapshot(nextOrders);
+    if (nextSnapshot === hostOrdersSnapshot) return;
+    hostOrders = nextOrders;
+    hostOrdersSnapshot = nextSnapshot;
     renderHostOrders();
   } catch (err) {
     console.warn('Failed to poll public order API:', err);
@@ -3380,9 +3400,13 @@ async function updateHostOrders() {
     const text = await res.text();
     const rows = csvToRows(text).filter(row => row.length >= 1);
     const dismissed = getDismissedOrderIds();
-    hostOrders = csvRowsToOrders(rows)
+    const nextOrders = csvRowsToOrders(rows)
       .map(applyCachedOrderTitle)
       .filter(item => !dismissed.has(item.id) && item.status !== 'done');
+    const nextSnapshot = buildOrdersSnapshot(nextOrders);
+    if (nextSnapshot === hostOrdersSnapshot) return;
+    hostOrders = nextOrders;
+    hostOrdersSnapshot = nextSnapshot;
     renderHostOrders();
   } catch (err) {
     console.warn('Failed to poll fallback public CSV feed:', err);
@@ -3433,6 +3457,7 @@ function removeOrder(id, event) {
   dismissed.add(String(id));
   saveDismissedOrderIds(dismissed);
   hostOrders = hostOrders.filter(item => String(item.id) !== String(id));
+  hostOrdersSnapshot = buildOrdersSnapshot(hostOrders);
   renderHostOrders();
   toast('✅ Đã ẩn yêu cầu khỏi hàng đợi');
 }
