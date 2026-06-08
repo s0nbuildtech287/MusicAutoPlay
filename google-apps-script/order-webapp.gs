@@ -1,4 +1,4 @@
-const CONFIG = {
+﻿const CONFIG = {
   SPREADSHEET_ID: '1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM',
   ORDERS_SHEET_NAME: 'Orders',
   LIST_SHEET_NAME: 'List',
@@ -114,7 +114,37 @@ function appendOrder_(payload) {
   };
 }
 
+function isFallbackOrderTitle_(title) {
+  const text = String(title || '').trim();
+  return !text || /^Yêu cầu nhạc/i.test(text) || /^Đang tải tên bài hát/i.test(text);
+}
+
+function refreshPendingTitles_() {
+  const sheet = getOrdersSheet_();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return;
+
+  let refreshed = 0;
+  const maxRefresh = 5;
+
+  for (let i = 1; i < values.length && refreshed < maxRefresh; i++) {
+    const status = String(values[i][2] || 'pending').trim().toLowerCase();
+    const vid = String(values[i][5] || '').trim();
+    const title = String(values[i][6] || '').trim();
+
+    if (!vid || status === 'done' || !isFallbackOrderTitle_(title)) continue;
+
+    const resolved = fetchYouTubeTitle_(vid);
+    if (resolved && !isFallbackOrderTitle_(resolved) && resolved !== title) {
+      sheet.getRange(i + 1, 7).setValue(resolved);
+      values[i][6] = resolved;
+    }
+    refreshed++;
+  }
+}
+
 function listOrders_() {
+  refreshPendingTitles_();
   const sheet = getOrdersSheet_();
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return [];
@@ -144,9 +174,8 @@ function markOrderDone_(id) {
   for (let i = 1; i < values.length; i++) {
     const rowId = String(values[i][0] || '').trim();
     if (rowId !== targetId) continue;
-    sheet.getRange(i + 1, 3).setValue('done');
-    sheet.getRange(i + 1, 8).setValue(`done:${new Date().toISOString()}`);
-    return { ok: true, id: targetId };
+    sheet.deleteRow(i + 1);
+    return { ok: true, id: targetId, deleted: true };
   }
 
   return { ok: false, error: 'Order not found', id: targetId };
@@ -447,19 +476,48 @@ function getOrderPageHtml_() {
     "",
     "    function renderQueue(orders) {",
     "      const latest = (orders || []).filter(o => String(o.status || 'pending').toLowerCase() !== 'done').slice(-8).reverse();",
-    "      queue.innerHTML = latest.length ? latest.map(o => `",
+    "      queue.innerHTML = latest.length ? latest.map((o, index) => {",
+    "        const displayTitle = (o.title && !/^Yêu cầu nhạc/i.test(String(o.title)) && !/^Đang tải tên bài hát/i.test(String(o.title))) ? o.title : 'Đang tải tên bài hát...';",
+    "        return `",
     "        <div class=\"item\">",
     "          <div class=\"top\">",
     "            <div>",
-    "              <div class=\"name\">#${escapeHtml(o.rowNumber || '')} ${escapeHtml(o.name || '')}</div>",
-    "              <div class=\"meta\">${escapeHtml(o.timestamp || '')}</div>",
+    "              <div class=\"name\">#${index + 1} • ${escapeHtml(displayTitle)}</div>",
+    "              <div class=\"meta\">Người gửi: ${escapeHtml(o.name || 'Ẩn danh')}</div>",
     "            </div>",
     "            <div class=\"meta\">${escapeHtml(o.status || 'pending')}</div>",
     "          </div>",
-    "          <div class=\"title\">${escapeHtml((o.title && !/^Y[eê]u c[aả]u nh[aạ]c/i.test(String(o.title))) ? o.title : 'Đang tải tên bài hát...')}</div>",
+    "          <div class=\"small\">${escapeHtml(o.timestamp || '')}</div>",
     "        </div>",
-    "      `).join('') : '<div class=\"small\">Chưa có order nào.</div>';",
+    "      `; }).join('') : '<div class=\"small\">Chưa có order nào.</div>';",
     "    }",
+    "",
+    "    function setSubmitting(isSubmitting) {",
+    "      btn.disabled = isSubmitting;",
+    "      btn.textContent = isSubmitting ? 'Đang gửi...' : 'Gửi order';",
+    "    }",
+    "",
+    "    form.addEventListener('submit', (e) => {",
+    "      e.preventDefault();",
+    "      if (btn.disabled) return;",
+    "      const name = document.getElementById('name').value.trim();",
+    "      const url = document.getElementById('url').value.trim();",
+    "      if (!name) { showToast('Vui lòng chọn tên'); return; }",
+    "      if (!url) { showToast('Vui lòng nhập link YouTube'); return; }",
+    "      setSubmitting(true);",
+    "      google.script.run",
+    "        .withSuccessHandler(() => {",
+    "          showToast('Đã gửi order');",
+    "          document.getElementById('url').value = '';",
+    "          loadQueue();",
+    "          setSubmitting(false);",
+    "        })",
+    "        .withFailureHandler((err) => {",
+    "          showToast((err && err.message) ? err.message : 'Không gửi được order');",
+    "          setSubmitting(false);",
+    "        })",
+    "        .submitOrderFromPage(name, url);",
+    "    });",
     "",
     "    function loadQueue() {",
     "      if (typeof google === 'undefined' || !google.script || !google.script.run) {",
@@ -474,31 +532,8 @@ function getOrderPageHtml_() {
     "        .getPageOrders();",
     "    }",
     "",
-    "    form.addEventListener('submit', async (e) => {",
-    "      e.preventDefault();",
-    "      btn.disabled = true;",
-    "      btn.textContent = 'Đang gửi...';",
-    "      try {",
-    "        const name = document.getElementById('name').value.trim();",
-    "        const url = document.getElementById('url').value.trim();",
-    "        google.script.run",
-    "          .withSuccessHandler(() => {",
-    "            showToast('Đã gửi order');",
-    "            document.getElementById('url').value = '';",
-    "            loadQueue();",
-    "          })",
-    "          .withFailureHandler((err) => {",
-    "            showToast((err && err.message) ? err.message : 'Không gửi được order');",
-    "          })",
-    "          .submitOrderFromPage(name, url);",
-    "      } catch (err) {",
-    "        showToast(err.message || 'Không gửi được order');",
-    "      } finally {",
-    "        btn.disabled = false;",
-    "        btn.textContent = 'Gửi order';",
-    "      }",
-    "    });",
-    "",
+
+
     "    loadQueue();",
     "    setInterval(loadQueue, 5000);",
     "  </script>",
@@ -507,3 +542,7 @@ function getOrderPageHtml_() {
     "",
   ].join('\n').replace('__NAME_OPTIONS__', buildNameOptionsHtml_());
 }
+
+
+
+
