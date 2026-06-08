@@ -14,86 +14,10 @@ function isValidVideoId(id) {
   return /^[\w-]{11}$/.test(id);
 }
 
-// Get local IPv4 address (prioritizing physical Wi-Fi/Ethernet adapters and filtering out virtual/VPN cards)
-function getLocalIpInfo() {
-  const interfaces = os.networkInterfaces();
-  const candidates = [];
-  const preferredIp = process.env.LOTUSQUANT_HOST_IP?.trim() || process.env.PREFER_LAN_IP?.trim() || '';
-
-  for (const name of Object.keys(interfaces)) {
-    const nameLower = name.toLowerCase();
-    
-    // Check if the interface is virtual, VPN, Docker, WSL, etc.
-    const isVirtualOrVpn = /virtual|vbox|vmware|vpn|wsl|hyper-v|docker|npcap|taptun|zerotier|tailscale|forti|cisco|anyconnect|globalprotect|openvpn|loopback|teredo/i.test(nameLower);
-
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        let score = 0;
-        
-        // Prefer Wi-Fi over Ethernet, but both are physical candidates
-        if (/wi-fi|wifi|wlan|wireless/i.test(nameLower)) {
-          score += 60;
-        } else if (/ethernet|eth|en\d+|lan/i.test(nameLower)) {
-          score += 40;
-        }
-        
-        // De-prioritize virtual interfaces or default VirtualBox host-only subnets
-        if (isVirtualOrVpn || iface.address.startsWith('192.168.56.')) {
-          score -= 100;
-        }
-
-        // Prefer typical LAN subnets (192.168.x.x, 10.x.x.x)
-        if (iface.address.startsWith('192.168.') || iface.address.startsWith('10.')) {
-          score += 10;
-        } else if (iface.address.startsWith('172.')) {
-          const parts = iface.address.split('.');
-          const secondOctet = parseInt(parts[1], 10);
-          if (secondOctet >= 16 && secondOctet <= 31) {
-            score += 5;
-          }
-        }
-
-        candidates.push({ address: iface.address, score, name });
-      }
-    }
-  }
-
-  let chosen = null;
-  if (candidates.length > 0) {
-    // Sort by score descending
-    candidates.sort((a, b) => b.score - a.score);
-    chosen = candidates[0].address;
-    console.log('[Network] Detected IPs:', candidates.map(c => `${c.name}: ${c.address} (score: ${c.score})`).join(', '));
-  } else {
-    chosen = '127.0.0.1';
-  }
-
-  const preferredIpFound = preferredIp
-    ? candidates.some(candidate => candidate.address === preferredIp)
-    : false;
-
-  return {
-    ip: preferredIpFound ? preferredIp : chosen,
-    chosenIp: chosen,
-    preferredIp,
-    preferredIpFound,
-    candidates: candidates.map(candidate => ({
-      address: candidate.address,
-      name: candidate.name,
-      score: candidate.score
-    }))
-  };
-}
-
-function getLocalIp() {
-  return getLocalIpInfo().ip;
-}
-
 // Order state
 let orderQueue = [];
 let currentPlayingUser = null;
 let consecutiveCount = 0;
-let membersList = [];
 let orderEnabled = true; // Mirrored from Apps Script; default open until remote state is known.
 let orderEnabledSynced = false;
 let orderEnabledSyncPromise = null;
@@ -285,11 +209,6 @@ function startServer() {
   expressApp.use(express.static(path.join(__dirname, 'public')));
   expressApp.use('/people', express.static(path.join(__dirname, 'people')));
 
-  // Order page route
-  expressApp.get('/order', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'order.html'));
-  });
-
   // Stream API endpoint (inline to avoid require issues)
   expressApp.get('/api/stream', async (req, res) => {
     const { id } = req.query;
@@ -331,34 +250,6 @@ function startServer() {
         res.status(500).json({ error: err.message });
       }
     }
-  });
-
-  // API to sync members list (from Google Sheet loaded in host player)
-  expressApp.post('/api/members', (req, res) => {
-    const { members } = req.body;
-    if (Array.isArray(members)) {
-      membersList = members.map(m => m.trim()).filter(Boolean);
-      console.log(`[Queue] Updated members list from host: ${membersList.length} members`);
-    }
-    res.json({ success: true });
-  });
-
-  // API to get members list (for order page dropdown)
-  expressApp.get('/api/members', (req, res) => {
-    res.json({ members: membersList });
-  });
-
-  // API to get local IP
-  expressApp.get('/api/ip', (req, res) => {
-    const network = getLocalIpInfo();
-    res.json({
-      ip: network.ip,
-      port: PORT,
-      chosenIp: network.chosenIp,
-      preferredIp: network.preferredIp,
-      preferredIpFound: network.preferredIpFound,
-      candidates: network.candidates
-    });
   });
 
   // API to get/set order enabled state (admin only)
@@ -540,7 +431,7 @@ function startServer() {
   });
 
   server = expressApp.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server started on http://0.0.0.0:${PORT} (LAN: http://${getLocalIp()}:${PORT})`);
+    console.log(`✅ Server started on http://127.0.0.1:${PORT}`);
     syncRemoteOrders();
     ensureOrderEnabledSynced().catch(err => {
       console.warn('[Order] Initial order state sync failed:', err.message || err);

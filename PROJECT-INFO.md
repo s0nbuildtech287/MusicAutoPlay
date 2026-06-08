@@ -21,7 +21,7 @@
 ✅ Search nhanh bài hát  
 ✅ Desktop app, không cần browser  
 ✅ Fun features (Party Mode, Achievements, Easter Eggs)  
-✅ Tính năng Order Nhạc nội bộ LAN: Đồng nghiệp tự quét mã/truy cập link trên điện thoại gửi yêu cầu bài hát YouTube.  
+✅ Tính năng Order Nhạc qua Apps Script public: Đồng nghiệp mở link Google Apps Script để gửi yêu cầu bài hát YouTube.  
 
 ---
 
@@ -59,19 +59,17 @@
 │  │  /api/order (POST - submit request) │  │
 │  │  /api/orders (GET - current queue)  │  │
 │  │  /api/orders/next (GET next song)   │  │
-│  │  /api/members (POST/GET sync names) │  │
 │  │  → yt-dlp → YouTube audio stream     │  │
 │  └─────────────────────────────────────┘  │
 │  ┌─────────────────────────────────────┐  │
 │  │  Static files (/public)             │  │
-│  │  - order.html (Mobile Order Page)   │  │
 │  └───────────▲─────────────────────────┘  │
 └──────────────┼────────────────────────────┘
-               │ HTTP Requests (LAN port 7777)
-               │ (Order & Queue updates)
+               │ Apps Script API + Orders CSV
+               │ (Public order & queue updates)
         ┌──────┴────────────────────────┐
-        │   Mobile / Web Clients (LAN)  │
-        │  (Đồng nghiệp tại văn phòng)  │
+        │   Public Order Web App        │
+        │  (Google Apps Script)         │
         └───────────────────────────────┘
                      ↓
 ┌───────────────────────────────────────────┐
@@ -119,20 +117,20 @@
 - **Playlist View**: Status (playing/done), click to jump
 - **Responsive**: Auto-adjust theo window size
 
-### 6. LAN Music Order 📱
-- **Local Server Hosting**: Khởi động web server ngầm trên cổng `7777` cho phép mọi người truy cập qua mạng nội bộ LAN/Wi-Fi.
-- **Dò IP LAN thông minh**: Tự động lọc bỏ các card mạng ảo/VPN (WSL, Docker, VirtualBox, VMware, OpenVPN...) và ưu tiên card Wi-Fi/Ethernet thực tế.
-- **Trang Order di động (`order.html`)**:
-  - Giao diện Glassmorphism mượt mà tối ưu cho di động.
-  - Dropdown chọn tên tự động đồng bộ từ file Google Sheet loaded (kèm option tự điền nếu là nhân viên mới).
-  - Cập nhật hàng đợi Realtime sau mỗi 3 giây, tự động ghi nhớ tên người gửi.
+### 6. Public Music Order 📱
+- **Google Apps Script Web App**: Đồng nghiệp mở link public để gửi order, không phụ thuộc IP LAN của máy host.
+- **Google Sheet Orders**: Sheet `Orders` là hàng đợi trung gian cho web app và desktop app.
+- **Desktop Queue Sync**:
+  - Desktop tự đồng bộ order từ Apps Script/Google Sheet.
+  - Admin có thể bật/tắt order, xóa bài chờ, và thêm order nội bộ từ desktop.
+  - Cập nhật hàng đợi định kỳ, tự động ghi nhớ tên bài đã resolve.
 - **Thuật toán xếp lịch (Round-Robin Queue scheduler)**:
   - Tự động ưu tiên phát nhạc order trước, khi hàng đợi rỗng tự động quay về nhạc Google Sheet.
   - Cơ chế chống "chiếm sóng": Giới hạn tối đa **2 bài liên tiếp** cho cùng một người order (nếu một người gửi liên tục nhiều bài, hệ thống sẽ tự động xen kẽ bài của người khác lên trước).
   - Trích xuất tiêu đề tự động bằng `yt-dlp` sử dụng cơ chế `execFile` an toàn và cấu hình `--encoding utf-8` để hiển thị chuẩn tiếng Việt có dấu.
 
 ### 7. Bảng Vàng Âm Nhạc & Thống kê 📊
-- **Đếm số lượng phát**: Đếm tổng số bài đã phát, phân tích tỷ lệ phát nhạc Google Sheet (📄) và nhạc LAN Order (📱).
+- **Đếm số lượng phát**: Đếm tổng số bài đã phát, phân tích tỷ lệ phát nhạc Google Sheet (📄) và nhạc Order (📱).
 - **Leaderboard "Chiếm Sóng"**: Xếp hạng Top 5 thành viên yêu cầu nhiều nhạc nhất được phát, hiển thị ảnh đại diện tròn xoay mini.
 - **Lịch sử phát gần đây**: Xem lại 10 bài hát đã chạy qua kèm mốc thời gian tương đối ("Vừa xong", "5 phút trước"...).
 - **Lưu trữ bảo mật**: Sử dụng `localStorage` của máy chủ nên dữ liệu tồn tại vĩnh viễn kể cả khi restart ứng dụng. Có nút đặt lại (Reset) để xóa lịch sử khi sang tuần/ngày mới.
@@ -189,25 +187,16 @@
 - Easter eggs
 - Keyboard shortcuts (Space, arrows, Ctrl+B)
 
-#### 4. `order.html` (Mobile Order Page - 400 LOC)
-**Responsibilities:**
-- Giao diện nhập link nhạc YouTube phong cách Glassmorphism cho thiết bị di động.
-- Dropdown danh sách thành viên tự động tải từ máy chủ.
-- Hiển thị hàng đợi thời gian thực cập nhật sau mỗi 3 giây.
-- Lưu trữ tên người order vào LocalStorage.
-
 ### Backend & Desktop App:
 
 #### `electron-main.js` (Electron Main Process & Integrated Server - 320 LOC)
 - **Electron Window**: Khởi tạo cửa sổ Chromium hiển thị giao diện Player chính.
-- **Express Server**: Khởi chạy web server lắng nghe cổng `7777` trên mọi địa chỉ IP (`0.0.0.0`) để phục vụ mạng LAN.
-- **Dò quét IP mạng**: Logic tìm kiếm card mạng thực tế (Wi-Fi/Ethernet) và lọc bỏ card ảo/VPN.
+- **Express Server**: Khởi chạy web server local trên cổng `7777` để phục vụ giao diện desktop và API nội bộ.
 - **YouTube Streaming (`/api/stream`)**: Sử dụng `spawn` chạy ngầm `yt-dlp` để trích xuất và pipe luồng âm thanh định dạng `.webm` trực tiếp về client.
 - **Order Management APIs**:
   - `POST /api/order`: Tiếp nhận yêu cầu, phân tích video ID, gọi `execFile` của `yt-dlp` lấy tiêu đề với bảng mã UTF-8.
   - `GET /api/orders`: Trả về hàng đợi đang chờ.
   - `POST /api/orders/next`: Lập lịch Round-Robin và giới hạn tối đa 2 bài liên tiếp của một người order.
-  - `POST /api/members` / `GET /api/members`: Đồng bộ danh sách tên từ Google Sheet sang trang order.
 
 ---
 

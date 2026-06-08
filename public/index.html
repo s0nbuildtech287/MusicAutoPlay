@@ -910,45 +910,6 @@
     #orderBannerCard {
       animation: order-glow 2.8s ease-in-out infinite;
     }
-    #orderIpWarning {
-      display: none;
-      margin-top: 8px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(251, 191, 36, 0.45);
-      background: rgba(120, 53, 15, 0.25);
-      color: #fde68a;
-      font-size: 0.78rem;
-      line-height: 1.45;
-      text-shadow: none;
-    }
-    #orderIpWarning .warning-inner {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      justify-content: space-between;
-    }
-    #orderIpWarning .warning-text {
-      min-width: 0;
-      flex: 1;
-    }
-    #orderIpWarning .warning-close {
-      border: none;
-      background: transparent;
-      color: #fde68a;
-      cursor: pointer;
-      font-size: 1rem;
-      line-height: 1;
-      padding: 0 0 0 8px;
-      flex-shrink: 0;
-      opacity: 0.9;
-    }
-    #orderIpWarning .warning-close:hover {
-      opacity: 1;
-    }
-    #orderIpWarning.is-visible {
-      display: block;
-    }
     @keyframes order-glow {
       0%, 100% { box-shadow: 0 0 18px rgba(251,146,60,0.25), inset 0 0 20px rgba(251,146,60,0.06); }
       50%       { box-shadow: 0 0 28px rgba(251,146,60,0.45), inset 0 0 24px rgba(251,146,60,0.12); }
@@ -2566,13 +2527,6 @@ async function loadSheet() {
     state.members = [...new Set(allScannedNames)];
     state.activeMembers = new Set(state.members);
 
-    // Sync members with server for the order page dropdown
-    fetch('/api/members', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ members: state.members })
-    }).catch(err => console.warn('Failed to sync members list:', err));
-
     renderFilterChips();
     buildPlaylist();
     toast(`✅ Đã load ${state.songs.length} bài của ${state.members.length} người`);
@@ -3308,7 +3262,7 @@ startBtn.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════
-//  ORDER HOST MANAGEMENT & LAN API HANDLERS
+//  ORDER HOST MANAGEMENT
 // ═══════════════════════════════════════════════════════
 let hostOrders = [];
 let orderTitleCache = loadOrderTitleCache();
