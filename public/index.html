@@ -1474,6 +1474,8 @@
           </p>
           <!-- Copy icon button -->
           <button id="copyOrderUrlBtn" title="Sao chép link" style="flex-shrink:0;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(251,146,60,0.6);color:#fb923c;background:rgba(251,146,60,0.1);cursor:pointer;border-radius:8px;transition:all 0.2s;font-size:1rem;">📋</button>
+          <!-- Edit icon button -->
+          <button id="editOrderUrlBtn" title="Chỉnh link" style="flex-shrink:0;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(251,146,60,0.6);color:#fb923c;background:rgba(251,146,60,0.1);cursor:pointer;border-radius:8px;transition:all 0.2s;font-size:1rem;">✎</button>
           <!-- Order toggle -->
           <label class="order-toggle-wrap" title="Bật/tắt cho phép order nhạc" style="flex-shrink:0;">
             <span class="order-toggle-label" id="orderToggleLabel">OFF</span>
@@ -1615,6 +1617,22 @@
   <!-- Toast Container -->
   <div id="toast-container"></div>
 
+  <!-- Order URL Editor -->
+  <div id="orderUrlEditor" class="hidden" style="position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+    <div style="width:min(560px,100%);background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.12);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,0.45);padding:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+        <div style="font-size:1rem;font-weight:700;color:#fff;">Chỉnh link order public</div>
+        <button type="button" id="closeOrderUrlEditorBtn" style="width:32px;height:32px;border:none;border-radius:10px;background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:0.82rem;color:#cbd5e1;margin-bottom:10px;">Dán URL web app mới vào đây rồi bấm Lưu.</div>
+      <input id="orderUrlEditorInput" type="text" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#fff;outline:none;" />
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;">
+        <button type="button" id="resetOrderUrlBtn" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">Dùng link mặc định</button>
+        <button type="button" id="saveOrderUrlEditorBtn" style="padding:10px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#fb923c,#ec4899,#8b5cf6);color:#fff;font-weight:700;cursor:pointer;">Lưu</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Hidden Audio -->
   <audio id="audioEl" preload="none"></audio>
 
@@ -1636,6 +1654,7 @@ const state = {
   currentOrderSong: null, // currently playing order song if any
 };
 
+const ORDER_PUBLIC_URL_KEY = 'mcp_orderPublicUrl';
 const ORDER_DISMISSED_IDS_KEY = 'lotusquant_order_dismissed_ids';
 const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
 const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwDlkhy4CMDBXIwR7vUcyRV2sdjv4cwO-BalyxC0QhMZOIMp1MX4w7Qdj3H700tSEclxw/exec';
@@ -1649,6 +1668,12 @@ const sheetUrl     = $('sheetUrl');
 const loadBtn      = $('loadBtn');
 const loadBtnText  = $('loadBtnText');
 const saveUrlBtn   = $('saveUrlBtn');
+const editOrderUrlBtn = $('editOrderUrlBtn');
+const orderUrlEditor = $('orderUrlEditor');
+const orderUrlEditorInput = $('orderUrlEditorInput');
+const saveOrderUrlEditorBtn = $('saveOrderUrlEditorBtn');
+const closeOrderUrlEditorBtn = $('closeOrderUrlEditorBtn');
+const resetOrderUrlBtn = $('resetOrderUrlBtn');
 const tabRR        = $('tabRoundRobin');
 const tabBurst     = $('tabBurst');
 const burstConfig  = $('burstConfig');
@@ -3082,7 +3107,7 @@ function syncOrderPublicUrlBanner() {
   if (copyBtn && !copyBtn.dataset.bound) {
     copyBtn.dataset.bound = '1';
     copyBtn.addEventListener('click', () => {
-      const liveLink = DEFAULT_ORDER_PUBLIC_URL.trim();
+      const liveLink = getSavedOrderPublicUrl();
       if (!liveLink) {
         toast('⚠️ Chưa có URL để sao chép');
         return;
@@ -3093,7 +3118,15 @@ function syncOrderPublicUrlBanner() {
     });
   }
 
-  const url = DEFAULT_ORDER_PUBLIC_URL.trim();
+  const editBtn = $('editOrderUrlBtn');
+  if (editBtn && !editBtn.dataset.bound) {
+    editBtn.dataset.bound = '1';
+    editBtn.addEventListener('click', () => {
+      openOrderUrlEditor();
+    });
+  }
+
+  const url = getSavedOrderPublicUrl();
   if (url) {
     orderLink.href = url;
     orderLink.textContent = 'Link Lotusquant Order Music';
@@ -3106,7 +3139,63 @@ function syncOrderPublicUrlBanner() {
   orderLink.title = 'Chưa có link order public';
 }
 
+function getSavedOrderPublicUrl() {
+  return (localStorage.getItem(ORDER_PUBLIC_URL_KEY) || DEFAULT_ORDER_PUBLIC_URL || '').trim();
+}
+
+function setSavedOrderPublicUrl(url) {
+  const next = String(url || '').trim();
+  if (!next) return false;
+  localStorage.setItem(ORDER_PUBLIC_URL_KEY, next);
+  syncOrderPublicUrlBanner();
+  return true;
+}
+
+function openOrderUrlEditor() {
+  if (!orderUrlEditor || !orderUrlEditorInput) return;
+  orderUrlEditorInput.value = getSavedOrderPublicUrl();
+  orderUrlEditor.classList.remove('hidden');
+  orderUrlEditor.style.display = 'flex';
+  setTimeout(() => orderUrlEditorInput.focus(), 0);
+}
+
+function closeOrderUrlEditor() {
+  if (!orderUrlEditor) return;
+  orderUrlEditor.classList.add('hidden');
+  orderUrlEditor.style.display = 'none';
+}
+
+if (saveOrderUrlEditorBtn && orderUrlEditorInput) {
+  saveOrderUrlEditorBtn.addEventListener('click', () => {
+    if (!setSavedOrderPublicUrl(orderUrlEditorInput.value)) {
+      toast('⚠️ URL không hợp lệ');
+      return;
+    }
+    closeOrderUrlEditor();
+    toast('💾 Đã cập nhật link order');
+  });
+}
+
+if (closeOrderUrlEditorBtn) {
+  closeOrderUrlEditorBtn.addEventListener('click', closeOrderUrlEditor);
+}
+
+if (resetOrderUrlBtn && orderUrlEditorInput) {
+  resetOrderUrlBtn.addEventListener('click', () => {
+    orderUrlEditorInput.value = DEFAULT_ORDER_PUBLIC_URL;
+  });
+}
+
+if (orderUrlEditor) {
+  orderUrlEditor.addEventListener('click', (e) => {
+    if (e.target === orderUrlEditor) closeOrderUrlEditor();
+  });
+}
+
 function loadSavedOrderPublicUrl() {
+  if (!localStorage.getItem(ORDER_PUBLIC_URL_KEY)) {
+    localStorage.setItem(ORDER_PUBLIC_URL_KEY, DEFAULT_ORDER_PUBLIC_URL);
+  }
   syncOrderPublicUrlBanner();
 }
 
