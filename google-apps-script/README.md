@@ -11,7 +11,7 @@ Spreadsheet ID:
 
 Public links:
 
-- Apps Script web app: `https://script.google.com/a/macros/lotusquant.com/s/AKfycbwAsOw2a06EFmdCxuOiW9gYK_mxwbMq_C2zHQ_cgfA-ptzSEploU_deM_OiRcZkS-3QPg/exec`
+- Apps Script web app: `https://script.google.com/macros/s/AKfycbwW1hNIHd5ck7xf_EQ407AWgikYELJqdqgOf0rQsIRUDPWTm51N2eevMLMPcCAkPO0Z0g/exec`
 - Orders CSV feed: `https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv`
 
 ## Setup

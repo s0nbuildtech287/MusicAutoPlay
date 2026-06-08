@@ -2,6 +2,8 @@
   SPREADSHEET_ID: '1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM',
   ORDERS_SHEET_NAME: 'Orders',
   LIST_SHEET_NAME: 'List',
+  ORDER_ADMIN_KEY: 'lotusquant-order-admin-2026',
+  ORDER_ENABLED_KEY: 'LOTUSQUANT_ORDER_ENABLED',
 };
 
 function doGet(e) {
@@ -19,6 +21,21 @@ function doGet(e) {
 
   if (action === 'list') {
     return jsonOutput_({ ok: true, orders: listOrders_() });
+  }
+
+  if (action === 'status') {
+    return jsonOutput_({ ok: true, enabled: isOrderEnabled_() });
+  }
+
+  if (action === 'set-status') {
+    const key = e && e.parameter && e.parameter.key ? String(e.parameter.key).trim() : '';
+    const enabled = e && e.parameter && e.parameter.enabled ? String(e.parameter.enabled).trim().toLowerCase() : '';
+    if (key !== CONFIG.ORDER_ADMIN_KEY) {
+      return jsonOutput_({ ok: false, error: 'Unauthorized' });
+    }
+    const nextEnabled = enabled === '1' || enabled === 'true' || enabled === 'on';
+    setOrderEnabled_(nextEnabled);
+    return jsonOutput_({ ok: true, enabled: nextEnabled });
   }
 
   if (action === 'done') {
@@ -86,6 +103,10 @@ function parsePayload_(e) {
 }
 
 function appendOrder_(payload) {
+  if (!isOrderEnabled_()) {
+    throw new Error('Order is disabled');
+  }
+
   const name = String(payload.name || '').trim();
   const url = String(payload.url || '').trim();
 
@@ -248,6 +269,20 @@ function getListSheet_() {
   let sheet = ss.getSheetByName(CONFIG.LIST_SHEET_NAME);
   if (!sheet) sheet = ss.insertSheet(CONFIG.LIST_SHEET_NAME);
   return sheet;
+}
+
+function isOrderEnabled_() {
+  const raw = PropertiesService.getScriptProperties().getProperty(CONFIG.ORDER_ENABLED_KEY);
+  if (raw === null || raw === '') return true;
+  return String(raw).toLowerCase() === 'true';
+}
+
+function setOrderEnabled_(enabled) {
+  PropertiesService.getScriptProperties().setProperty(CONFIG.ORDER_ENABLED_KEY, enabled ? 'true' : 'false');
+}
+
+function getOrderState() {
+  return { enabled: isOrderEnabled_() };
 }
 
 function normalizeText_(value) {
@@ -438,6 +473,7 @@ function getOrderPageHtml_() {
     "    <div class=\"card\">",
     "      <h1>Lotusquant Order</h1>",
     "      <p>Gửi link YouTube để thêm bài vào hàng đợi.</p>",
+    "      <div id=\"orderStateNotice\" class=\"small\" style=\"margin:10px 0 6px;color:#fca36b;font-weight:600;\"></div>",
     "      <form id=\"orderForm\">",
     "        <label for=\"name\">Tên</label>",
     "        <input id=\"name\" name=\"name\" list=\"memberNames\" maxlength=\"30\" autocomplete=\"name\" placeholder=\"Tên của bạn\" required />",
@@ -467,6 +503,11 @@ function getOrderPageHtml_() {
     "    const btn = document.getElementById('submitBtn');",
     "    const queue = document.getElementById('queue');",
     "    const toastEl = document.getElementById('toast');",
+    "    const orderStateNotice = document.getElementById('orderStateNotice');",
+    "    const nameInput = document.getElementById('name');",
+    "    const urlInput = document.getElementById('url');",
+    "    const orderFormControls = [nameInput, urlInput, btn];",
+    "    let orderEnabled = true;",
     "",
     "    function showToast(msg) {",
     "      toastEl.textContent = msg;",
@@ -521,12 +562,23 @@ function getOrderPageHtml_() {
     "      btn.disabled = isSubmitting;",
     "      btn.textContent = isSubmitting ? 'Đang gửi...' : 'Gửi order';",
     "    }",
+
+    "    function setOrderFormEnabled(enabled) {",
+    "      orderEnabled = !!enabled;",
+    "      orderFormControls.forEach(el => { if (el) el.disabled = !orderEnabled; });",
+    "      if (orderStateNotice) {",
+    "        orderStateNotice.textContent = orderEnabled ? 'Order đang mở' : 'Order đang tắt';",
+    "        orderStateNotice.style.color = orderEnabled ? '#fca36b' : '#f87171';",
+    "      }",
+    "      if (btn) btn.textContent = orderEnabled ? 'Gửi order' : 'Order đã tắt';",
+    "    }",
     "",
     "    form.addEventListener('submit', (e) => {",
     "      e.preventDefault();",
     "      if (btn.disabled) return;",
     "      const name = document.getElementById('name').value.trim();",
     "      const url = document.getElementById('url').value.trim();",
+    "      if (!orderEnabled) { showToast('Order đang tắt'); return; }",
     "      if (!name) { showToast('Vui lòng chọn tên'); return; }",
     "      if (!url) { showToast('Vui lòng nhập link YouTube'); return; }",
     "      setSubmitting(true);",
@@ -556,11 +608,29 @@ function getOrderPageHtml_() {
     "        })",
     "        .getPageOrders();",
     "    }",
+
+    "    function loadOrderState() {",
+    "      fetch('?action=status&t=' + Date.now(), { cache: 'no-store' })",
+    "        .then(r => r.json())",
+    "        .then((state) => setOrderFormEnabled(!(state && state.enabled === false)))",
+    "        .catch(() => {",
+    "          if (typeof google !== 'undefined' && google.script && google.script.run) {",
+    "            google.script.run",
+    "              .withSuccessHandler((state) => setOrderFormEnabled(!(state && state.enabled === false)))",
+    "              .withFailureHandler(() => setOrderFormEnabled(true))",
+    "              .getOrderState();",
+    "          } else {",
+    "            setOrderFormEnabled(true);",
+    "          }",
+    "        });",
+    "    }",
     "",
 
 
     "    loadQueue();",
+    "    loadOrderState();",
     "    setInterval(loadQueue, 5000);",
+    "    setInterval(loadOrderState, 5000);",
     "  </script>",
     "</body>",
     "</html>",

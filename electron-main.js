@@ -7,7 +7,7 @@ const os = require('os');
 let mainWindow;
 let server;
 let remoteOrderSyncTimer;
-const ORDER_WEBAPP_URL = process.env.LOTUSQUANT_ORDER_WEBAPP_URL?.trim() || 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwAsOw2a06EFmdCxuOiW9gYK_mxwbMq_C2zHQ_cgfA-ptzSEploU_deM_OiRcZkS-3QPg/exec';
+const ORDER_WEBAPP_URL = process.env.LOTUSQUANT_ORDER_WEBAPP_URL?.trim() || 'https://script.google.com/macros/s/AKfycbwW1hNIHd5ck7xf_EQ407AWgikYELJqdqgOf0rQsIRUDPWTm51N2eevMLMPcCAkPO0Z0g/exec';
 
 // Validate YouTube video ID
 function isValidVideoId(id) {
@@ -130,6 +130,17 @@ function getOrderWebAppApiUrl(action, params = {}) {
   return url.toString();
 }
 
+async function readAppsScriptResponse(res) {
+  const body = await res.text();
+  let data = null;
+  try {
+    data = body ? JSON.parse(body) : null;
+  } catch (_) {
+    data = null;
+  }
+  return { body, data };
+}
+
 function normalizeOrderTimestamp(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   const parsed = Date.parse(value);
@@ -161,13 +172,16 @@ function normalizeLocalOrder(order) {
 }
 
 async function markRemoteOrderDone(orderId) {
-  try {
-    const res = await fetch(getOrderWebAppApiUrl('done', { id: orderId }));
-    const body = await res.text();
-    console.log(`[Orders] mark done ${orderId}: HTTP ${res.status} ${body}`);
-  } catch (err) {
-    console.warn('[Orders] Failed to mark remote order done:', err.message || err);
+  const res = await fetch(getOrderWebAppApiUrl('done', { id: orderId }));
+  const { body, data } = await readAppsScriptResponse(res);
+  console.log(`[Orders] mark done ${orderId}: HTTP ${res.status} ${body}`);
+  if (data && data.ok === false && ['Order not found', 'No rows'].includes(data.error)) {
+    return { ok: true, deleted: false, missing: true };
   }
+  if (!res.ok || !data || data.ok !== true) {
+    throw new Error((data && data.error) || `HTTP ${res.status}`);
+  }
+  return data;
 }
 
 async function updateRemoteOrderTitle(orderId, title) {
@@ -177,6 +191,28 @@ async function updateRemoteOrderTitle(orderId, title) {
     console.log(`[Orders] update title ${orderId}: HTTP ${res.status} ${body}`);
   } catch (err) {
     console.warn('[Orders] Failed to update remote order title:', err.message || err);
+  }
+}
+
+async function updateRemoteOrderEnabled(enabled) {
+  const res = await fetch(getOrderWebAppApiUrl('set-status', { enabled: enabled ? 'true' : 'false', key: 'lotusquant-order-admin-2026' }));
+  const { body, data } = await readAppsScriptResponse(res);
+  console.log(`[Order] sync remote enabled=${enabled}: HTTP ${res.status} ${body}`);
+  if (!res.ok || !data || data.ok !== true) {
+    throw new Error((data && data.error) || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+async function syncOrderEnabledFromRemote() {
+  try {
+    const res = await fetch(getOrderWebAppApiUrl('status'));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    orderEnabled = data.enabled === true;
+    console.log(`[Order] Synced order state from remote: ${orderEnabled ? 'ENABLED' : 'DISABLED'}`);
+  } catch (err) {
+    console.warn('[Order] Failed to sync order state from remote:', err.message || err);
   }
 }
 
@@ -311,10 +347,20 @@ function startServer() {
   expressApp.get('/api/order-status', (req, res) => {
     res.json({ enabled: orderEnabled });
   });
-  expressApp.post('/api/order-toggle', (req, res) => {
-    orderEnabled = req.body.enabled === true;
-    console.log(`[Order] Order ${orderEnabled ? 'ENABLED' : 'DISABLED'} by admin`);
-    res.json({ enabled: orderEnabled });
+  expressApp.post('/api/order-toggle', async (req, res) => {
+    const nextEnabled = req.body.enabled === true;
+    try {
+      const remote = await updateRemoteOrderEnabled(nextEnabled);
+      orderEnabled = nextEnabled;
+      console.log(`[Order] Order ${orderEnabled ? 'ENABLED' : 'DISABLED'} by admin`);
+      res.json({ enabled: orderEnabled, remote });
+    } catch (err) {
+      console.warn('[Order] Failed to sync remote order state:', err.message || err);
+      res.status(502).json({
+        enabled: orderEnabled,
+        error: 'Khong dong bo duoc trang thai order len web app',
+      });
+    }
   });
 
   // API to submit an order
@@ -420,7 +466,9 @@ function startServer() {
 
     if (nextSong && nextSong.source === 'webapp') {
       completedRemoteOrderIds.add(nextSong.id);
-      markRemoteOrderDone(nextSong.id);
+      markRemoteOrderDone(nextSong.id).catch(err => {
+        console.warn('[Orders] Failed to delete played remote order:', err.message || err);
+      });
     }
 
     // Update scheduling tracker
@@ -443,12 +491,18 @@ function startServer() {
 
     const originalLen = orderQueue.length;
     const removedRemote = orderQueue.find(item => item.id === id && item.source === 'webapp');
-    orderQueue = orderQueue.filter(item => item.id !== id);
 
     if (removedRemote) {
-      completedRemoteOrderIds.add(removedRemote.id);
-      await markRemoteOrderDone(removedRemote.id);
+      try {
+        await markRemoteOrderDone(removedRemote.id);
+        completedRemoteOrderIds.add(removedRemote.id);
+      } catch (err) {
+        console.warn('[Orders] Failed to delete remote order:', err.message || err);
+        return res.status(502).json({ error: 'Khong xoa duoc hang cho tren web app' });
+      }
     }
+
+    orderQueue = orderQueue.filter(item => item.id !== id);
 
     if (orderQueue.length === originalLen) {
       return res.status(404).json({ error: 'Không tìm thấy bài hát trong danh sách chờ!' });
@@ -460,6 +514,7 @@ function startServer() {
   server = expressApp.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server started on http://0.0.0.0:${PORT} (LAN: http://${getLocalIp()}:${PORT})`);
     syncRemoteOrders();
+    syncOrderEnabledFromRemote();
     if (!remoteOrderSyncTimer) {
       remoteOrderSyncTimer = setInterval(syncRemoteOrders, 5000);
     }
