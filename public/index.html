@@ -3340,6 +3340,20 @@ function buildOrdersSnapshot(orders) {
     .join('||');
 }
 
+function formatVietnamDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 function csvRowsToOrders(rows) {
   if (!rows.length) return [];
 
@@ -3444,6 +3458,7 @@ function renderHostOrders() {
         <div class="pl-info" style="flex: 1; margin-right: 12px;">
           <div class="pl-name" style="font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(displayTitle)}</div>
           <div class="pl-sub" style="font-size: 0.72rem; color: #fb923c;">Người gửi: <strong>${escapeHTML(item.name || 'Ẩn danh')}</strong></div>
+          <div class="pl-sub" style="font-size: 0.68rem; color: var(--text-muted);">${escapeHTML(formatVietnamDateTime(item.timestamp))}</div>
         </div>
         <button class="btn btn-ghost" onclick="removeOrder('${escapeHTML(item.id)}', event)" style="padding: 4px 8px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: #f87171; background: transparent; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s;">Xóa</button>
       </div>

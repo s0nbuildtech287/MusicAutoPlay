@@ -101,12 +101,12 @@ function appendOrder_(payload) {
   const timestamp = new Date();
   const canonicalUrl = `https://www.youtube.com/watch?v=${vid}`;
 
-  sheet.appendRow([id, timestamp, 'pending', name, canonicalUrl, vid, title, '']);
+  sheet.appendRow([id, timestamp, 'loading', name, canonicalUrl, vid, title, '']);
 
   return {
     id,
     timestamp: timestamp.toISOString(),
-    status: 'pending',
+    status: 'loading',
     name,
     url: canonicalUrl,
     vid,
@@ -128,7 +128,7 @@ function refreshPendingTitles_() {
   const maxRefresh = 5;
 
   for (let i = 1; i < values.length && refreshed < maxRefresh; i++) {
-    const status = String(values[i][2] || 'pending').trim().toLowerCase();
+    const status = String(values[i][2] || '').trim().toLowerCase();
     const vid = String(values[i][5] || '').trim();
     const title = String(values[i][6] || '').trim();
 
@@ -138,6 +138,10 @@ function refreshPendingTitles_() {
     if (resolved && !isFallbackOrderTitle_(resolved) && resolved !== title) {
       sheet.getRange(i + 1, 7).setValue(resolved);
       values[i][6] = resolved;
+      if (status === 'pending' || status === 'loading') {
+        sheet.getRange(i + 1, 3).setValue('');
+        values[i][2] = '';
+      }
     }
     refreshed++;
   }
@@ -154,7 +158,7 @@ function listOrders_() {
     .map((row, idx) => ({
       id: String(row[0] || '').trim(),
       timestamp: row[1] ? new Date(row[1]).toISOString() : '',
-      status: String(row[2] || 'pending').trim().toLowerCase(),
+      status: String(row[2] || '').trim().toLowerCase(),
       name: String(row[3] || '').trim(),
       url: String(row[4] || '').trim(),
       vid: String(row[5] || '').trim(),
@@ -162,6 +166,12 @@ function listOrders_() {
       note: String(row[7] || '').trim(),
       rowNumber: idx + 2,
     }))
+    .map(row => {
+      if ((row.status === 'pending' || row.status === 'loading') && !isFallbackOrderTitle_(row.title)) {
+        row.status = '';
+      }
+      return row;
+    })
     .filter(row => row.id || row.name || row.url || row.title);
 }
 
@@ -192,6 +202,7 @@ function updateOrderTitle_(id, title) {
     const rowId = String(values[i][0] || '').trim();
     if (rowId !== targetId) continue;
     sheet.getRange(i + 1, 7).setValue(cleanTitle);
+    sheet.getRange(i + 1, 3).setValue('');
     return { ok: true, id: targetId, title: cleanTitle };
   }
 
@@ -474,8 +485,22 @@ function getOrderPageHtml_() {
     "      }[m]));",
     "    }",
     "",
+    "    function formatVietnamTime(value) {",
+    "      if (!value) return '';",
+    "      const date = new Date(value);",
+    "      if (Number.isNaN(date.getTime())) return String(value);",
+    "      return new Intl.DateTimeFormat('vi-VN', {",
+    "        day: '2-digit',",
+    "        month: '2-digit',",
+    "        year: 'numeric',",
+    "        hour: '2-digit',",
+    "        minute: '2-digit',",
+    "        hour12: false,",
+    "      }).format(date);",
+    "    }",
+    "",
     "    function renderQueue(orders) {",
-    "      const latest = (orders || []).filter(o => String(o.status || 'pending').toLowerCase() !== 'done').slice(-8).reverse();",
+    "      const latest = (orders || []).filter(o => String(o.status || '').toLowerCase() !== 'done').slice(-8).reverse();",
     "      queue.innerHTML = latest.length ? latest.map((o, index) => {",
     "        const displayTitle = (o.title && !/^Yêu cầu nhạc/i.test(String(o.title)) && !/^Đang tải tên bài hát/i.test(String(o.title))) ? o.title : 'Đang tải tên bài hát...';",
     "        return `",
@@ -485,9 +510,9 @@ function getOrderPageHtml_() {
     "              <div class=\"name\">#${index + 1} • ${escapeHtml(displayTitle)}</div>",
     "              <div class=\"meta\">Người gửi: ${escapeHtml(o.name || 'Ẩn danh')}</div>",
     "            </div>",
-    "            <div class=\"meta\">${escapeHtml(o.status || 'pending')}</div>",
+    "            <div class=\"meta\">${escapeHtml(String(o.status || '').toLowerCase() === 'loading' ? 'Đang tải...' : '')}</div>",
     "          </div>",
-    "          <div class=\"small\">${escapeHtml(o.timestamp || '')}</div>",
+    "          <div class=\"small\">${escapeHtml(formatVietnamTime(o.timestamp))}</div>",
     "        </div>",
     "      `; }).join('') : '<div class=\"small\">Chưa có order nào.</div>';",
     "    }",
@@ -542,7 +567,3 @@ function getOrderPageHtml_() {
     "",
   ].join('\n').replace('__NAME_OPTIONS__', buildNameOptionsHtml_());
 }
-
-
-
-
