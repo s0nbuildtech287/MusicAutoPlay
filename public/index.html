@@ -1656,6 +1656,7 @@ const state = {
 
 const ORDER_PUBLIC_URL_KEY = 'mcp_orderPublicUrl';
 const ORDER_DISMISSED_IDS_KEY = 'lotusquant_order_dismissed_ids';
+const ORDER_TITLE_CACHE_KEY = 'lotusquant_order_title_cache';
 const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
 const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/a/macros/lotusquant.com/s/AKfycbwDlkhy4CMDBXIwR7vUcyRV2sdjv4cwO-BalyxC0QhMZOIMp1MX4w7Qdj3H700tSEclxw/exec';
 
@@ -3260,6 +3261,7 @@ startBtn.addEventListener('click', () => {
 //  ORDER HOST MANAGEMENT & LAN API HANDLERS
 // ═══════════════════════════════════════════════════════
 let hostOrders = [];
+let orderTitleCache = loadOrderTitleCache();
 
 function getOrdersCsvUrl() {
   const sep = ORDERS_CSV_URL.includes('?') ? '&' : '?';
@@ -3285,6 +3287,45 @@ function saveDismissedOrderIds(set) {
   localStorage.setItem(ORDER_DISMISSED_IDS_KEY, JSON.stringify([...set]));
 }
 
+function loadOrderTitleCache() {
+  try {
+    const raw = localStorage.getItem(ORDER_TITLE_CACHE_KEY) || '{}';
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOrderTitleCache(cache) {
+  localStorage.setItem(ORDER_TITLE_CACHE_KEY, JSON.stringify(cache || {}));
+}
+
+function getCachedOrderTitle(id) {
+  return String(orderTitleCache[String(id || '')] || '').trim();
+}
+
+function cacheOrderTitle(id, title) {
+  const key = String(id || '').trim();
+  const value = String(title || '').trim();
+  if (!key || !value || isFallbackOrderTitle(value)) return;
+  if (orderTitleCache[key] === value) return;
+  orderTitleCache[key] = value;
+  saveOrderTitleCache(orderTitleCache);
+}
+
+function applyCachedOrderTitle(item) {
+  const next = { ...item };
+  const cachedTitle = getCachedOrderTitle(next.id);
+  if (cachedTitle && isFallbackOrderTitle(next.title)) {
+    next.title = cachedTitle;
+  }
+  if (!isFallbackOrderTitle(next.title)) {
+    cacheOrderTitle(next.id, next.title);
+  }
+  return next;
+}
+
 function csvRowsToOrders(rows) {
   if (!rows.length) return [];
 
@@ -3306,14 +3347,29 @@ function csvRowsToOrders(rows) {
 
 async function updateHostOrders() {
   try {
-    const res = await fetch(getOrdersApiUrl(), { cache: 'no-store' });
+    const res = await fetch('/api/orders', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
     const dismissed = getDismissedOrderIds();
-    hostOrders = (data.orders || []).filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
+    hostOrders = (data.orders || [])
+      .map(applyCachedOrderTitle)
+      .filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
     renderHostOrders();
     return;
+  } catch (err) {
+    console.warn('Failed to poll local order API:', err);
+  }
+
+  try {
+    const res = await fetch(getOrdersApiUrl(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const dismissed = getDismissedOrderIds();
+    const data = await res.json();
+    hostOrders = (data.orders || [])
+      .map(applyCachedOrderTitle)
+      .filter(item => !dismissed.has(String(item.id || '')) && String(item.status || 'pending').toLowerCase() !== 'done');
+    renderHostOrders();
   } catch (err) {
     console.warn('Failed to poll public order API:', err);
   }
@@ -3324,7 +3380,9 @@ async function updateHostOrders() {
     const text = await res.text();
     const rows = csvToRows(text).filter(row => row.length >= 1);
     const dismissed = getDismissedOrderIds();
-    hostOrders = csvRowsToOrders(rows).filter(item => !dismissed.has(item.id) && item.status !== 'done');
+    hostOrders = csvRowsToOrders(rows)
+      .map(applyCachedOrderTitle)
+      .filter(item => !dismissed.has(item.id) && item.status !== 'done');
     renderHostOrders();
   } catch (err) {
     console.warn('Failed to poll fallback public CSV feed:', err);
@@ -3353,7 +3411,7 @@ function renderHostOrders() {
   }
 
   container.innerHTML = hostOrders.map((item, index) => {
-    const displayTitle = isFallbackOrderTitle(item.title) ? 'Đang tải tên bài hát...' : (item.title || item.url || 'Yêu cầu nhạc');
+    const displayTitle = isFallbackOrderTitle(item.title) ? (getCachedOrderTitle(item.id) || 'Đang tải tên bài hát...') : item.title;
     return `
       <div class="pl-item" style="justify-content: space-between;">
         <div class="pl-num">${index + 1}</div>

@@ -426,7 +426,7 @@ function getOrderPageHtml_() {
     "  <div class=\"wrap\">",
     "    <div class=\"card\">",
     "      <h1>Lotusquant Order</h1>",
-    "      <p>Gửi link YouTube để thêm bài vào hàng đợi. Link này hoạt động qua Internet, không phụ thuộc IP LAN của máy phát.</p>",
+    "      <p>Gửi link YouTube để thêm bài vào hàng đợi.</p>",
     "      <form id=\"orderForm\">",
     "        <label for=\"name\">Tên</label>",
     "        <input id=\"name\" name=\"name\" list=\"memberNames\" maxlength=\"30\" autocomplete=\"name\" placeholder=\"Tên của bạn\" required />",
