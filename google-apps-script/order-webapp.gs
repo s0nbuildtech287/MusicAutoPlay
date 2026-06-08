@@ -107,6 +107,28 @@ function listOrders_() {
     }));
 }
 
+function listMemberNames_() {
+  const sheet = getListSheet_();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headerRow = values[0].map(cell => normalizeText_(cell));
+  const nameCol = headerRow.findIndex(cell => cell === 'ten');
+  if (nameCol === -1) return [];
+
+  const seen = new Set();
+  const names = [];
+  for (let i = 1; i < values.length; i++) {
+    const name = String(values[i][nameCol] || '').trim();
+    if (!name) continue;
+    const key = normalizeText_(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+  }
+  return names;
+}
+
 function getOrdersSheet_() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   let sheet = ss.getSheetByName(CONFIG.ORDERS_SHEET_NAME);
@@ -117,6 +139,22 @@ function getOrdersSheet_() {
   }
 
   return sheet;
+}
+
+function getListSheet_() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.LIST_SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(CONFIG.LIST_SHEET_NAME);
+  return sheet;
+}
+
+function normalizeText_(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
 }
 
 function extractVideoId_(input) {
@@ -164,6 +202,12 @@ function jsonOutput_(payload) {
 
 function escapeHtml_(str) {
   return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function buildNameOptionsHtml_() {
+  return listMemberNames_()
+    .map(name => `<option value="${escapeHtml_(name)}"></option>`)
+    .join('');
 }
 
 function getOrderPageHtml_() {
@@ -262,7 +306,8 @@ function getOrderPageHtml_() {
     "      <p>Gửi link YouTube để thêm bài vào hàng đợi. Link này hoạt động qua Internet, không phụ thuộc IP LAN của máy phát.</p>",
     "      <form id=\"orderForm\">",
     "        <label for=\"name\">Tên</label>",
-    "        <input id=\"name\" name=\"name\" maxlength=\"30\" autocomplete=\"name\" placeholder=\"Tên của bạn\" required />",
+    "        <input id=\"name\" name=\"name\" list=\"memberNames\" maxlength=\"30\" autocomplete=\"name\" placeholder=\"Tên của bạn\" required />",
+    "        <datalist id=\"memberNames\">__NAME_OPTIONS__</datalist>",
     "",
     "        <label for=\"url\">Link YouTube</label>",
     "        <input id=\"url\" name=\"url\" type=\"url\" placeholder=\"https://www.youtube.com/watch?v=...\" required />",
@@ -361,5 +406,5 @@ function getOrderPageHtml_() {
     "</body>",
     "</html>",
     "",
-  ].join('\n');
+  ].join('\n').replace('__NAME_OPTIONS__', buildNameOptionsHtml_());
 }
