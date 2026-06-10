@@ -464,12 +464,19 @@
     .np-avatar {
       width: 120px; height: 120px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), #60a5fa);
+      background:
+        radial-gradient(circle at center, #111827 0 9%, #020617 10% 17%, transparent 18%),
+        repeating-radial-gradient(circle at center, #111827 0 3px, #020617 4px 8px),
+        radial-gradient(circle at 35% 28%, rgba(255,255,255,0.12), transparent 28%),
+        #030712;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2rem;
-      box-shadow: 0 0 32px rgba(124, 106, 247, 0.3);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.08),
+        inset 0 0 28px rgba(0,0,0,0.8),
+        0 0 24px rgba(0,0,0,0.45);
       transition: border-radius 0.4s, background 0.4s;
       overflow: hidden;
       padding: 0;
