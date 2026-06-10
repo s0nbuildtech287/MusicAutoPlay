@@ -1,8 +1,8 @@
 {
   "name": "company-music-player",
   "version": "1.1.0",
-  "description": "LotusQuant Internal Music Player",
-  "author": "LotusQuant",
+  "description": "MyMusic Internal Music Player",
+  "author": "MyMusic",
   "main": "electron-main.js",
   "scripts": {
     "dev": "node server.js",
@@ -12,7 +12,7 @@
   },
   "build": {
     "appId": "com.lotusquant.musicplayer",
-    "productName": "Lotusquant Music",
+    "productName": "MyMusic Player",
     "asar": false,
     "files": [
       "api/**/*",
@@ -35,7 +35,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Lotusquant Music"
+      "shortcutName": "MyMusic Player"
     }
   },
   "dependencies": {

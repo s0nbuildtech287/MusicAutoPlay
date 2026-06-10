@@ -200,7 +200,7 @@ async function syncRemoteOrders() {
 // Start Express server inside Electron
 function startServer() {
   const expressApp = express();
-  const PORT = 7777;
+  const PORT = 8888;
 
   // Middleware to parse JSON bodies
   expressApp.use(express.json());
@@ -465,7 +465,7 @@ function createWindow() {
     attempts++;
     console.log(`Loading attempt ${attempts}...`);
     
-    mainWindow.loadURL('http://127.0.0.1:7777').catch(err => {
+    mainWindow.loadURL('http://127.0.0.1:8888').catch(err => {
       console.error(`Load failed (${attempts}):`, err.message);
       if (attempts < 5) {
         setTimeout(tryLoad, 1000);

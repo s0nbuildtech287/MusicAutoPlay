@@ -51,7 +51,7 @@ File output nằm trong folder `dist/`:
 
 ```
 dist/
-├── Lotusquant Music Setup 1.0.0.exe  ← Installer (~150MB)
+├── MyMusic Player Setup 1.1.0.exe  ← Installer (~150MB)
 └── win-unpacked/                      ← Portable version (không cần cài)
 ```
 
@@ -61,7 +61,7 @@ dist/
 
 ### Cách 1: Share installer (khuyến nghị)
 
-1. Upload `Lotusquant Music Setup 1.0.0.exe` lên:
+1. Upload `MyMusic Player Setup 1.1.0.exe` lên:
    - Google Drive
    - OneDrive
    - Hoặc USB
@@ -79,7 +79,7 @@ dist/
 2. Share file zip
 3. Người dùng:
    - Giải nén ra Desktop
-   - Chạy `Lotusquant Music.exe`
+   - Chạy `MyMusic Player.exe`
 
 ---
 

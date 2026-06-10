@@ -1,8 +1,8 @@
-# 📖 Project Information - Lotusquant Music Player
+# 📖 Project Information - MyMusic Player
 
 ## 🎯 Giới thiệu dự án
 
-**Lotusquant Music Player** là ứng dụng nghe nhạc nội bộ được phát triển riêng cho LotusQuant Company, cho phép các thành viên request bài hát yêu thích và nghe theo hàng đợi công bằng.
+**MyMusic Player** là ứng dụng nghe nhạc nội bộ, cho phép các thành viên request bài hát yêu thích và nghe theo hàng đợi công bằng.
 
 ---
 
@@ -50,7 +50,7 @@
 │  │  └──────────────┬────────────────┘  │  │
 │  └─────────────────┼───────────────────┘  │
 └────────────────────┼──────────────────────┘
-                     │ HTTP (localhost:7777)
+                     │ HTTP (localhost:8888)
                      ↓
 ┌───────────────────────────────────────────┐
 │       Express Server (Node.js)            │
@@ -378,8 +378,8 @@ git push origin feature/your-feature
 ## 📜 License & Credits
 
 ### License:
-**Internal Use Only** - LotusQuant Company  
-© 2026 LotusQuant. All rights reserved.
+**Internal Use Only** - MyMusic Internal  
+© 2026 MyMusic. All rights reserved.
 
 ### Credits:
 - **yt-dlp**: YouTube audio extraction
@@ -388,7 +388,7 @@ git push origin feature/your-feature
 - **Google Sheets**: Data source
 
 ### Special Thanks:
-- LotusQuant Team: Testing & feedback
+- MyMusic Team: Testing & feedback
 - IT Department: Infrastructure support
 - All contributors: Feature ideas & bug reports
 
@@ -408,4 +408,4 @@ Status         : ✅ Production Ready
 
 ---
 
-**🎵 Made with ❤️ by LotusQuant Team**
+**🎵 Made with ❤️ by MyMusic Team**

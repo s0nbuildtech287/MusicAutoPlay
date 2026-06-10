@@ -1,6 +1,6 @@
-# 🎵 Lotusquant Music Player
+# 🎵 MyMusic Player
 
-**Music Player nội bộ cho LotusQuant Company**
+**Music Player nội bộ cho MyMusic Internal**
 
 Ứng dụng nghe nhạc theo yêu cầu của các thành viên, hỗ trợ quản lý playlist từ Google Sheet, với các tính năng vui như Party Mode, Search, Achievements và nhiều hơn nữa!
 
@@ -11,7 +11,7 @@
 ### 📦 Cách 1: Sử dụng file EXE (Recommended cho User)
 
 #### Tải về:
-- File: `Lotusquant Music Setup 1.2.0.exe`
+- File: `MyMusic Player Setup 1.1.0.exe`
 - Size: ~120 MB
 
 #### Cài đặt:
@@ -54,7 +54,7 @@ npm install
 ```bash
 npm run dev
 ```
-→ Mở browser: http://localhost:7777
+→ Mở browser: http://localhost:8888
 
 **Desktop app (Electron):**
 ```bash
@@ -178,10 +178,10 @@ Unlock badges khi đạt mốc:
 - Kiểm tra URL YouTube còn hoạt động
 - Thử skip sang bài khác
 
-### Port 7777 bị chiếm?
+### Port 8888 bị chiếm?
 ```bash
 # Tìm process
-netstat -ano | findstr :7777
+netstat -ano | findstr :8888
 
 # Kill process
 taskkill /F /PID <PID>
@@ -215,7 +215,7 @@ npm run build
 ```
 
 3. Output:
-- File: `dist/Lotusquant Music Setup 1.2.0.exe`
+- File: `dist/MyMusic Player Setup 1.1.0.exe`
 - Size: ~120 MB
 
 ### Build Config:
@@ -282,15 +282,15 @@ MusicLotusquant/
 
 ## 📄 License
 
-**Internal Use Only** - LotusQuant Company  
-© 2026 LotusQuant. All rights reserved.
+**Internal Use Only** - MyMusic Internal  
+© 2026 MyMusic. All rights reserved.
 
 ---
 
 ## 👥 Contributors
 
 - **SonBX** - Lead Developer
-- **LotusQuant Team** - Testing & Feedback
+- **MyMusic Team** - Testing & Feedback
 
 ---
 

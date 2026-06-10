@@ -3,7 +3,7 @@ const path = require('path');
 const streamHandler = require('./api/stream');
 
 const app = express();
-const PORT = 7777;
+const PORT = 8888;
 
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, 'public')));

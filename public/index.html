@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎵 Lotusquant Music Player — LotusQuant</title>
+  <title>🎵 MyMusic Player — MyMusic Internal</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
@@ -1330,8 +1330,8 @@
   <!-- App Header -->
   <div class="app-header">
     <img src="/favicon.png" alt="Logo" class="app-header-logo" id="logo" />
-    <h1>Lotusquant Music Player</h1>
-    <span class="badge">LotusQuant Internal</span>
+    <h1>MyMusic Player</h1>
+    <span class="badge">MyMusic Internal</span>
     <div class="header-actions">
       <button class="layout-btn" id="layoutBtn" title="Đổi bố cục">⊞ 2 cột</button>
       <button class="wave-color-btn" id="waveColorBtn">🎨 <span id="waveColorName">Mặc định</span></button>
@@ -1633,6 +1633,8 @@ const ORDER_DISMISSED_IDS_KEY = 'lotusquant_order_dismissed_ids';
 const ORDER_TITLE_CACHE_KEY = 'lotusquant_order_title_cache';
 const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
 const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/macros/s/AKfycbwW1hNIHd5ck7xf_EQ407AWgikYELJqdqgOf0rQsIRUDPWTm51N2eevMLMPcCAkPO0Z0g/exec';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI/edit?gid=0#gid=0';
+const LEGACY_DEFAULT_SHEET_IDS = ['1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM'];
 
 // ═══════════════════════════════════════════════════════
 //  ELEMENTS
@@ -3083,14 +3085,13 @@ function checkResume() {
 
 function loadSavedUrl() {
   const saved = localStorage.getItem('mcp_sheetUrl');
-  const defaultUrl = 'https://docs.google.com/spreadsheets/d/1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM/edit?gid=0#gid=0';
+  const shouldUseDefault = !saved || LEGACY_DEFAULT_SHEET_IDS.some(id => saved.includes(id));
   
-  if (saved) {
-    sheetUrl.value = saved;
+  if (shouldUseDefault) {
+    sheetUrl.value = DEFAULT_SHEET_URL;
+    localStorage.setItem('mcp_sheetUrl', DEFAULT_SHEET_URL);
   } else {
-    // Use default company sheet
-    sheetUrl.value = defaultUrl;
-    localStorage.setItem('mcp_sheetUrl', defaultUrl);
+    sheetUrl.value = saved;
   }
   
   // Auto-load sheet if saved URL exists

@@ -8,11 +8,11 @@ strScriptPath = objFSO.GetParentFolderName(WScript.ScriptFullName)
 strDesktop = objShell.SpecialFolders("Desktop")
 
 ' Create shortcut
-Set objShortcut = objShell.CreateShortcut(strDesktop & "\Lotusquant Music.lnk")
-objShortcut.TargetPath = strScriptPath & "\Lotusquant Music.vbs"
+Set objShortcut = objShell.CreateShortcut(strDesktop & "\MyMusic Player.lnk")
+objShortcut.TargetPath = strScriptPath & "\MyMusic Player.vbs"
 objShortcut.WorkingDirectory = strScriptPath
 objShortcut.IconLocation = strScriptPath & "\public\favicon.ico"
-objShortcut.Description = "Lotusquant Music Player"
+objShortcut.Description = "MyMusic Player"
 objShortcut.Save
 
 MsgBox "Shortcut created on Desktop!", vbInformation, "Success"
