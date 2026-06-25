@@ -34,7 +34,15 @@ function resolveTitleWithYtDlp(cleanUrl, vid) {
     const ytdlpPath = path.join(__dirname, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
     const { execFile } = require('child_process');
 
-    execFile(ytdlpPath, ['--encoding', 'utf-8', '--js-runtimes', 'node', '--get-title', cleanUrl], { encoding: 'utf8' }, (err, stdout) => {
+    const args = [
+      '--encoding', 'utf-8',
+      '--js-runtimes', 'node',
+      '--extractor-args', 'youtube:player_client=android',
+      '--get-title',
+      cleanUrl
+    ];
+
+    execFile(ytdlpPath, args, { encoding: 'utf8' }, (err, stdout) => {
       if (!err && stdout && stdout.trim()) {
         return resolve(stdout.trim());
       }
@@ -209,48 +217,9 @@ function startServer() {
   expressApp.use(express.static(path.join(__dirname, 'public')));
   expressApp.use('/people', express.static(path.join(__dirname, 'people')));
 
-  // Stream API endpoint (inline to avoid require issues)
-  expressApp.get('/api/stream', async (req, res) => {
-    const { id } = req.query;
-
-    if (!id || !isValidVideoId(id)) {
-      return res.status(400).json({ error: 'Invalid video ID' });
-    }
-
-    const url = `https://www.youtube.com/watch?v=${id}`;
-    const isWindows = os.platform() === 'win32';
-    const ytdlpPath = path.join(__dirname, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
-
-    console.log(`[Stream] ${url}`);
-
-    try {
-      const args = [
-        '-f', 'bestaudio/best',
-        '--no-playlist',
-        '--quiet',
-        '--js-runtimes', 'node',
-        '-o', '-',
-        url
-      ];
-
-      const ytdlp = spawn(ytdlpPath, args);
-
-      res.setHeader('Content-Type', 'audio/webm');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      ytdlp.stdout.pipe(res);
-      ytdlp.stderr.on('data', (data) => console.error(`[yt-dlp] ${data}`));
-      ytdlp.on('error', (err) => console.error(`[yt-dlp error]`, err));
-
-      req.on('close', () => ytdlp.kill());
-    } catch (err) {
-      console.error('[Stream error]', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: err.message });
-      }
-    }
-  });
+  // Stream API endpoint - routed directly to the robust stream handler module
+  const streamHandler = require('./api/stream');
+  expressApp.get('/api/stream', streamHandler);
 
   // API to get/set order enabled state (admin only)
   expressApp.get('/api/order-status', async (req, res) => {
@@ -328,7 +297,14 @@ function startServer() {
     const { execFile } = require('child_process');
     
     // Use execFile to bypass cmd.exe shell encoding issues on Windows and read UTF-8 output directly
-    execFile(ytdlpPath, ['--encoding', 'utf-8', '--js-runtimes', 'node', '--get-title', cleanUrl], { encoding: 'utf8' }, (err, stdout, stderr) => {
+    const args = [
+      '--encoding', 'utf-8',
+      '--js-runtimes', 'node',
+      '--extractor-args', 'youtube:player_client=android',
+      '--get-title',
+      cleanUrl
+    ];
+    execFile(ytdlpPath, args, { encoding: 'utf8' }, (err, stdout, stderr) => {
       let finalTitle = `Yêu cầu nhạc (${vid})`;
       if (!err && stdout) {
         finalTitle = stdout.trim();

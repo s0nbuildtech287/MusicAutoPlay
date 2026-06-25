@@ -16,14 +16,14 @@ function buildArgs(url, attempt) {
     '--extractor-retries', '3',
     '--retry-sleep', 'linear=1::3',
     '--socket-timeout', '15',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-    '--add-header', 'Accept-Language:en-US,en;q=0.9',
-    '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   ];
 
-  // On 2nd attempt: try android client which bypasses more restrictions
-  if (attempt >= 2) {
+  if (attempt === 1) {
     args.push('--extractor-args', 'youtube:player_client=android');
+  } else if (attempt === 2) {
+    args.push('--extractor-args', 'youtube:player_client=android;player_skip=webpage,configs');
+  } else {
+    args.push('--extractor-args', 'youtube:player_client=ios');
   }
 
   args.push('-o', '-', url);
