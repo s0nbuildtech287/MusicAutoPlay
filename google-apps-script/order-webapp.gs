@@ -1,5 +1,5 @@
-﻿const CONFIG = {
-  SPREADSHEET_ID: '1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM',
+const CONFIG = {
+  SPREADSHEET_ID: '1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI',
   ORDERS_SHEET_NAME: 'Orders',
   LIST_SHEET_NAME: 'List',
   ORDER_ADMIN_KEY: 'lotusquant-order-admin-2026',

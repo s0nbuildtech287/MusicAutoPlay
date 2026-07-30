@@ -7,7 +7,7 @@ This setup uses one Google Spreadsheet with two tabs:
 
 Spreadsheet ID:
 
-`1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM`
+`1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI`
 
 Public links:
 
