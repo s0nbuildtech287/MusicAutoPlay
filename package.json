@@ -8,7 +8,7 @@
     "dev": "node server.js",
     "start": "electron .",
     "postinstall": "node download-ytdlp.js",
-    "build": "electron-builder --win --x64",
+    "build": "node build.js",
     "vercel-build": "echo 'Skipping desktop build on Vercel'"
   },
   "build": {
