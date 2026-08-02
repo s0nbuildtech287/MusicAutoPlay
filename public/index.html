@@ -1643,6 +1643,94 @@ const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/macros/s/AKfycbwW1hN
 const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI/edit?gid=0#gid=0';
 const LEGACY_DEFAULT_SHEET_IDS = ['1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM'];
 
+const fallbackTracks = [
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3'
+];
+
+const demoSongsList = [
+  // 15 V-Pop Tracks
+  { stt: 1, name: 'SonBX', title: 'Chúng Ta Không Thuộc Về Nhau', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/chung-ta-khong-thuoc-ve-nhau-son-tung-m-tp-v-pop-essentials-v.-a-playlist-nhac-cua-tui/Chung%20Ta%20Khong%20Thuoc%20Ve%20Nhau%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_01' },
+  { stt: 2, name: 'AnhTD', title: 'Hãy Trao Cho Anh', artist: 'Sơn Tùng M-TP ft. Snoop Dogg', url: 'https://archive.org/download/hay-trao-cho-anh-son-tung-m-tp-snoop-dogg-top-100-nhac-tre-hay-nhat-v.-a-playlist-nhac-cua-tui/Hay%20Trao%20Cho%20Anh%20-%20Son%20Tung%20M-TP%20%28feat.%20Snoop%20Dogg%29.mp3', vid: 'demo_song_02' },
+  { stt: 3, name: 'LinhND', title: 'Chạy Ngay Đi', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/chay-ngay-di-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-tui-v.-a-_202309/Chay%20Ngay%20Di%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_03' },
+  { stt: 4, name: 'HuongLT', title: 'Một Năm Mới Bình An', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/mot-nam-moi-binh-an-son-tung-m-tp-tet-viet-nct-choice-v.-a-playlist-nhac-cua-tui_202308/Mot%20Nam%20Moi%20Binh%20An%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_04' },
+  { stt: 5, name: 'NhuLTQ', title: 'Nơi Này Có Anh', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/noi-nay-co-anh-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-tui-v.-a_202308/Noi%20Nay%20Co%20Anh%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_05' },
+  { stt: 6, name: 'TamTD', title: 'Lạc Trôi', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/lac-troi-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-tui-v.-a_202308/Lac%20Troi%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_06' },
+  { stt: 7, name: 'ThanhLQ', title: 'Bình Yên Những Phút Giây', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/binh-yen-nhung-phut-giay-son-tung-m-tp-v-pop-essentials-v.-a-playlist-nhac-cua-tu/Binh%20Yen%20Nhung%20Phut%20Giay%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_07' },
+  { stt: 8, name: 'ThoNTA', title: 'Remember Me', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/remember-me-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-tui-v.-a_202308/Remember%20Me%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_08' },
+  { stt: 9, name: 'TuNHA', title: 'Khuôn Mặt Đáng Thương', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/khuon-mat-dang-thuong-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-tu/Khuon%20Mat%20Dang%20Thuong%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_09' },
+  { stt: 10, name: 'Ducnm', title: 'Buông Đôi Tay Nhau Ra', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/buong-doi-tay-nhau-ra-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-t/Buong%20Doi%20Tay%20Nhau%20Ra%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_10' },
+  { stt: 11, name: 'DungLA', title: 'Ấn Nút Nhớ Thả Giấc Mơ', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/an-nut-nho-tha-giac-mo-son-tung-m-tp-top-100-v-pop-hot-2007-2022-15-nam-nhac-cua-/An%20Nut%20Nho%20Tha%20Giac%20Mo%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_11' },
+  { stt: 12, name: 'GiapDN', title: 'Tiến Lên Việt Nam Ơi', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/tien-len-viet-nam-oi-son-tung-m-tp-v-pop-essentials-v.-a-playlist-nhac-cua-tui/Tien%20Len%20Viet%20Nam%20Oi%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_12' },
+  { stt: 13, name: 'HinhNVT', title: 'Thái Bình Mồ Hôi Rơi', artist: 'Sơn Tùng M-TP', url: 'https://archive.org/download/thai-binh-mo-hoi-roi-son-tung-m-tp-tet-viet-nct-choice-v.-a-playlist-nhac-cua-tui/Thai%20Binh%20Mo%20Hoi%20Roi%20-%20Son%20Tung%20M-TP.mp3', vid: 'demo_song_13' },
+  { stt: 14, name: 'LinhHTK', title: 'Trốn Tìm', artist: 'Đen Vâu ft. MTV Band', url: 'https://archive.org/download/tron-tim-den-vau-ft.-mtv-band-v-pop-essentials-v.-a-playlist-nhac-cua-tui-nct/Tron%20Tim%20-%20Den%20Vau%20ft.%20MTV%20Band.mp3', vid: 'demo_song_14' },
+  { stt: 15, name: 'LinhTK', title: 'Mang Tiền Về Cho Mẹ', artist: 'Đen Vâu ft. Nguyên Thảo', url: 'https://archive.org/download/mang-tien-ve-cho-me-den-vau-ft.-nguyen-thao-v-pop-essentials-v.-a-playlist-nhac-c/Mang%20Tien%20Ve%20Cho%20Me%20-%20Den%20Vau%20ft.%20Nguyen%20Thao.mp3', vid: 'demo_song_15' },
+
+  // 15 Western Tracks
+  { stt: 16, name: 'ThanhNM', title: 'Stay', artist: 'The Kid LAROI & Justin Bieber', url: 'https://archive.org/download/English_songs/The%20Kid%20LAROI%2C%20Justin%20Bieber%20-%20Stay.mp3', vid: 'demo_song_16' },
+  { stt: 17, name: 'SonBX', title: 'Love Yourself', artist: 'Justin Bieber', url: 'https://archive.org/download/English_songs/Justin%20Bieber%20-%20Love%20Yourself.mp3', vid: 'demo_song_17' },
+  { stt: 18, name: 'AnhTD', title: 'She Will Be Loved', artist: 'Maroon 5', url: 'https://archive.org/download/englishsongs_202209/Maroon_5_%E2%95%B8She_Will_Be_Loved(3).MP3', vid: 'demo_song_18' },
+  { stt: 19, name: 'LinhND', title: 'Like I\'m Gonna Lose You', artist: 'Meghan Trainor ft. John Legend', url: 'https://archive.org/download/englishsongs_202209/Meghan_Trainor_%E2%95%B8Like_I\'m_Gonna_Lose_You(3).MP3', vid: 'demo_song_19' },
+  { stt: 20, name: 'HuongLT', title: 'Play Date', artist: 'Melanie Martinez', url: 'https://archive.org/download/englishsongs_202209/Melanie_Martinez_%E2%95%B8Play_Date(3).MP3', vid: 'demo_song_20' },
+  { stt: 21, name: 'NhuLTQ', title: 'Unstoppable', artist: 'Sia', url: 'https://archive.org/download/englishsongs_202209/Sia_%E2%95%B8Unstoppable(3).MP3', vid: 'demo_song_21' },
+  { stt: 22, name: 'TamTD', title: 'Until I Found You', artist: 'Stephen Sanchez', url: 'https://archive.org/download/englishsongs_202209/Stephen_Sanchez_%E2%95%B8Until_I_Found_You(3).MP3', vid: 'demo_song_22' },
+  { stt: 23, name: 'ThanhLQ', title: 'Ride', artist: 'Twenty One Pilots', url: 'https://archive.org/download/englishsongs_202209/Twenty_One_Pilots_%E2%95%B8Ride(3).MP3', vid: 'demo_song_23' },
+  { stt: 24, name: 'ThoNTA', title: 'See You Again', artist: 'Wiz Khalifa ft. Charlie Puth', url: 'https://archive.org/download/englishsongs_202209/Wiz_Khalifa_%E2%95%B8See_You_Again_ft__Charlie_Puth(3).MP3', vid: 'demo_song_24' },
+  { stt: 25, name: 'TuNHA', title: 'Perfect', artist: 'Ed Sheeran', url: 'https://archive.org/download/englishsongs_202209/Ed_Sheeran_%E2%95%B8Perfect.mp4', vid: 'demo_song_25' },
+  { stt: 26, name: 'Ducnm', title: 'Shape Of You', artist: 'Ed Sheeran', url: 'https://archive.org/download/englishsongs_202209/Ed_Sheeran_%E2%95%B8Shape_Of_You.mp4', vid: 'demo_song_26' },
+  { stt: 27, name: 'DungLA', title: 'Blank Space', artist: 'Taylor Swift', url: 'https://archive.org/download/englishsongs_202209/Taylor_Swift_%E2%95%B8Blank_Space.mp4', vid: 'demo_song_27' },
+  { stt: 28, name: 'GiapDN', title: 'Save Your Tears', artist: 'The Weeknd', url: 'https://archive.org/download/englishsongs_202209/The_Weeknd_%E2%95%B8Save_Your_Tears.mp4', vid: 'demo_song_28' },
+  { stt: 29, name: 'HinhNVT', title: 'As It Was', artist: 'Harry Styles', url: 'https://archive.org/download/englishsongs_202209/Harry_Styles_%E2%95%B8As_It_Was.mp4', vid: 'demo_song_29' },
+  { stt: 30, name: 'LinhHTK', title: 'Believer', artist: 'Imagine Dragons', url: 'https://archive.org/download/englishsongs_202209/Imagine_Dragons_%E2%95%B8Believer.mp4', vid: 'demo_song_30' }
+];
+
+function isOnlineDemoMode() {
+  const host = window.location.hostname;
+  return host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.');
+}
+
+function getAudioStreamUrl(vid, songTitle) {
+  if (!isOnlineDemoMode()) {
+    return `/api/stream?id=${vid}`;
+  }
+  const found = demoSongsList.find(s => s.vid === vid);
+  if (found) return found.url;
+  
+  let hash = 0;
+  const key = String(vid || songTitle || 'default');
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % fallbackTracks.length;
+  return fallbackTracks[index];
+}
+
+function loadDemoPlaylist() {
+  state.songs = demoSongsList;
+  const allNames = demoSongsList.map(s => s.name);
+  state.members = [...new Set(allNames)];
+  state.activeMembers = new Set(state.members);
+  
+  renderFilterChips();
+  buildPlaylist();
+  toast(`✅ Đã nạp ${state.songs.length} bài hát Demo ở chế độ Online!`);
+  checkResume();
+}
+
 // ═══════════════════════════════════════════════════════
 //  ELEMENTS
 // ═══════════════════════════════════════════════════════
@@ -2152,10 +2240,31 @@ function drawVisualizer() {
   // Update heights based on music state
   if (playing && visualizerAnalyser) {
     visualizerAnalyser.getByteFrequencyData(visualizerData);
+    
+    // Check if the frequency data is actually zero (CORS block on cross-origin stream)
+    let hasSignal = false;
+    for (let i = 0; i < visualizerData.length; i++) {
+      if (visualizerData[i] > 0) {
+        hasSignal = true;
+        break;
+      }
+    }
+
     for (let i = 0; i < 256; i++) {
-      // Map index to the active frequency bins (lower 75% contain the most visible beats)
-      const binIndex = Math.floor((i / 256) * visualizerAnalyser.frequencyBinCount * 0.75);
-      const target = visualizerData[binIndex] || 0;
+      let target = 0;
+      if (hasSignal) {
+        // Map index to the active frequency bins (lower 75% contain the most visible beats)
+        const binIndex = Math.floor((i / 256) * visualizerAnalyser.frequencyBinCount * 0.75);
+        target = visualizerData[binIndex] || 0;
+      } else {
+        // Mock active visualization beat waves when playing cross-origin tracks
+        const wave1 = Math.sin(now * 0.005 + i * 0.1) * 30 + 30;
+        const wave2 = Math.cos(now * 0.003 - i * 0.05) * 20 + 20;
+        const noise = Math.random() * 8;
+        // Dampen edges to look nice
+        const envelope = Math.cos((Math.abs(i - 128) / 128) * Math.PI / 2);
+        target = (wave1 + wave2 + noise) * envelope;
+      }
       // Linear interpolation for smoothing (lerp)
       window.smoothedHeights[i] = window.smoothedHeights[i] * 0.78 + target * 0.22;
     }
@@ -2855,8 +2964,8 @@ function playSong(index) {
   state.currentIndex = index;
   const song = state.playlist[index];
 
-  // Set audio src to our API endpoint
-  audioEl.src = `/api/stream?id=${song.vid}`;
+  // Set audio src dynamically (local endpoint or royalty-free fallback)
+  audioEl.src = getAudioStreamUrl(song.vid, song.title);
   audioEl.volume = state.volume / 100;
   ensureVisualizer();
 
@@ -2883,7 +2992,7 @@ function playSong(index) {
 function playOrderSong(song) {
   if (!state.isPlaybackLoading) setPlaybackLoading(true, 'play');
   state.currentOrderSong = song;
-  audioEl.src = `/api/stream?id=${song.vid}`;
+  audioEl.src = getAudioStreamUrl(song.vid, song.title);
   audioEl.volume = state.volume / 100;
   ensureVisualizer();
 
@@ -2999,10 +3108,26 @@ audioEl.addEventListener('ended', () => {
 });
 
 audioEl.addEventListener('error', () => {
-  const song = state.playlist[state.currentIndex];
+  const song = state.currentOrderSong || state.playlist[state.currentIndex];
   if (song) {
-    toast(`⚠️ Bỏ qua: ${song.title} (lỗi stream)`);
-    setTimeout(() => playNext(false), 2000);
+    // If it fails, check if we can try a demo fallback first
+    if (!audioEl.src.includes('soundhelix.com')) {
+      toast(`⚠️ Lỗi stream từ YouTube, đang thử nhạc dự phòng...`);
+      let hash = 0;
+      const key = String(song.vid || song.title || 'default');
+      for (let i = 0; i < key.length; i++) {
+        hash = key.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % fallbackTracks.length;
+      audioEl.src = fallbackTracks[index];
+      audioEl.play().catch(err => {
+        console.warn('Autoplay demo blocked:', err);
+        setTimeout(() => playNext(false), 2000);
+      });
+    } else {
+      toast(`⚠️ Bỏ qua: ${song.title} (lỗi stream)`);
+      setTimeout(() => playNext(false), 2000);
+    }
   }
 });
 
@@ -3091,6 +3216,10 @@ function checkResume() {
 }
 
 function loadSavedUrl() {
+  if (isOnlineDemoMode()) {
+    loadDemoPlaylist();
+    return;
+  }
   const saved = localStorage.getItem('mcp_sheetUrl');
   const shouldUseDefault = !saved || LEGACY_DEFAULT_SHEET_IDS.some(id => saved.includes(id));
   
