@@ -1644,22 +1644,22 @@ const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Vyxn-O8yR2UrJ
 const LEGACY_DEFAULT_SHEET_IDS = ['1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM'];
 
 const fallbackTracks = [
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3'
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/1.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/2.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/3.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/4.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/5.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/1.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/2.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/3.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/4.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/5.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/1.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/2.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/3.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/4.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/5.mp3',
+  'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/1.mp3'
 ];
 
 const demoSongsList = [
@@ -3111,7 +3111,7 @@ audioEl.addEventListener('error', () => {
   const song = state.currentOrderSong || state.playlist[state.currentIndex];
   if (song) {
     // If it fails, check if we can try a demo fallback first
-    if (!audioEl.src.includes('soundhelix.com')) {
+    if (!audioEl.src.includes('jsdelivr.net')) {
       toast(`⚠️ Lỗi stream từ YouTube, đang thử nhạc dự phòng...`);
       let hash = 0;
       const key = String(song.vid || song.title || 'default');
