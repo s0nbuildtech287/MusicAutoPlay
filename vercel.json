@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/people/:path*", "destination": "/people/:path*" },
+    { "source": "/:path*", "destination": "/public/:path*" }
+  ]
+}

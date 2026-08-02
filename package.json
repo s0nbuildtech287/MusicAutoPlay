@@ -8,7 +8,8 @@
     "dev": "node server.js",
     "start": "electron .",
     "postinstall": "node download-ytdlp.js",
-    "build": "electron-builder --win --x64"
+    "build": "electron-builder --win --x64",
+    "vercel-build": "echo 'Skipping desktop build on Vercel'"
   },
   "build": {
     "appId": "com.lotusquant.musicplayer",

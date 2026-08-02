@@ -4,6 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+if (process.env.VERCEL) {
+  console.log('✓ Running on Vercel environment. Skipping yt-dlp binary download.');
+  process.exit(0);
+}
+
 const isWindows = os.platform() === 'win32';
 const filename = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
 const filepath = path.join(__dirname, filename);
