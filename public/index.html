@@ -754,6 +754,8 @@
     .resume-banner p { font-size: 0.85rem; color: var(--text); }
     .resume-banner p span { color: var(--accent2); font-weight: 600; }
     .resume-actions { display: flex; gap: 8px; }
+    .resume-dismiss { width: 30px; height: 30px; flex: 0 0 30px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); background: transparent; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+    .resume-dismiss:hover { color: var(--text); background: rgba(255,255,255,0.08); }
 
     /* ─── Toast ─── */
     #toast-container {
@@ -1297,9 +1299,169 @@
       justify-content: center;
       margin-top: 10px;
     }
+    /* ═══════════════════════════════════════════════════════
+       PHASE 1 APP SHELL
+       The legacy player styles remain above; these tokens/layout
+       overrides provide the Spotify-like shell without replacing
+       the existing audio and Sheet logic.
+    ═══════════════════════════════════════════════════════ */
+    :root {
+      --shell-sidebar: 240px;
+      --shell-panel: 320px;
+      --shell-player: 82px;
+      --shell-gap: 16px;
+      --shell-surface: rgba(22, 18, 34, 0.88);
+    }
+    body {
+      align-items: stretch;
+      display: block;
+      padding: 0 0 calc(var(--shell-player) + 22px);
+      min-width: 0;
+    }
+    .app-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 20;
+      height: 100vh;
+      width: var(--shell-sidebar);
+      min-width: 0;
+      padding: 24px 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      background: rgba(9, 9, 15, 0.76);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+    }
+    .sidebar-brand { display:flex; align-items:center; gap:10px; padding:0 8px; }
+    .sidebar-brand img { width:36px; height:36px; border-radius:11px; object-fit:cover; }
+    .sidebar-brand strong { display:block; font-size:0.98rem; letter-spacing:-0.02em; }
+    .sidebar-brand small { display:block; margin-top:2px; color:var(--text-muted); font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; }
+    .sidebar-nav { display:flex; flex-direction:column; gap:5px; }
+    .sidebar-link { width:100%; display:flex; align-items:center; gap:12px; border:0; border-radius:11px; padding:11px 12px; background:transparent; color:var(--text-muted); cursor:pointer; text-align:left; transition:0.2s ease; }
+    .sidebar-link span { width:20px; text-align:center; font-size:1.12rem; }
+    .sidebar-link b { font-size:0.82rem; font-weight:600; }
+    .sidebar-link:hover, .sidebar-link.active { color:var(--text); background:rgba(167,139,250,0.14); }
+    .sidebar-link.active { box-shadow:inset 3px 0 var(--accent2); }
+    .sidebar-footer { margin-top:auto; display:flex; flex-direction:column; gap:8px; }
+    .sidebar-collapse { align-self:flex-end; width:32px; height:30px; border:1px solid var(--border); border-radius:8px; color:var(--text-muted); background:transparent; cursor:pointer; font-size:1.2rem; }
+    body.sidebar-collapsed .app-sidebar { padding-left:10px; padding-right:10px; }
+    body.sidebar-collapsed .sidebar-brand div, body.sidebar-collapsed .sidebar-link b { display:none; }
+    body.sidebar-collapsed .sidebar-link { justify-content:center; padding-left:8px; padding-right:8px; }
+    body.sidebar-collapsed .sidebar-collapse { align-self:center; transform:rotate(180deg); }
+    .app-shell { min-width:0; width:calc(100% - var(--shell-sidebar)); margin-left:var(--shell-sidebar); padding-top:20px; position:relative; z-index:1; }
+    body.sidebar-collapsed .app-shell { width:calc(100% - 64px); margin-left:64px; }
+    .app-header, .resume-banner, .main-layout { width:calc(100% - 48px); max-width:none; margin-left:auto; margin-right:auto; }
+    .app-header { padding-top:0; }
+    .mobile-nav-toggle { display:none; width:34px; height:34px; border:1px solid var(--border); border-radius:9px; color:var(--text); background:var(--surface2); cursor:pointer; }
+    .app-header-logo { width:54px; height:54px; }
+    .main-layout { grid-template-columns:minmax(0,1fr) var(--shell-panel); gap:var(--shell-gap); }
+    .col-top { display:none; grid-column:1 / -1; }
+    body.settings-open .col-top { display:block; }
+    .col-left { min-width:0; }
+    .home-insights-card { margin-top:var(--shell-gap); padding:18px; border:1px solid rgba(255,255,255,0.09); border-radius:var(--radius); background:linear-gradient(135deg,rgba(124,106,247,0.12),rgba(236,72,153,0.06)); box-shadow:0 12px 35px rgba(0,0,0,0.16); }
+    .home-insights-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .home-insights-heading strong { display:block; margin-top:4px; font-size:0.93rem; }
+    .home-insights-badge { padding:4px 8px; border:1px solid rgba(192,132,252,0.28); border-radius:999px; color:var(--accent2); font-size:0.6rem; font-weight:800; letter-spacing:0.1em; }
+    .home-insights-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .home-insight-tile { min-width:0; display:flex; align-items:center; gap:9px; padding:11px 10px; border:1px solid rgba(255,255,255,0.07); border-radius:11px; background:rgba(255,255,255,0.035); }
+    .home-insight-icon { width:28px; height:28px; display:grid; place-items:center; flex:0 0 28px; border-radius:9px; color:var(--accent2); background:rgba(167,139,250,0.14); font-size:1rem; }
+    .home-insight-tile small, .home-insight-tile strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .home-insight-tile small { color:var(--text-muted); font-size:0.65rem; }
+    .home-insight-tile strong { margin-top:3px; font-size:0.72rem; }
+    .col-right { min-width:0; max-height:calc(100vh - 126px); overflow:auto; position:sticky; top:16px; }
+    body.right-panel-hidden .col-right { display:none; }
+    body.right-panel-hidden .main-layout { grid-template-columns:minmax(0,1fr); }
+    .col-right::-webkit-scrollbar { width:5px; }
+    .col-right::-webkit-scrollbar-thumb { background:var(--border); border-radius:9px; }
+    .main-layout .card { background:var(--shell-surface); backdrop-filter:blur(16px); }
+    .audio-visualizer { opacity:0.12; filter:saturate(1.5) blur(2px); }
+    .shell-settings-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:4px 0 14px; }
+    .shell-settings-row strong, .shell-settings-row small { display:block; }
+    .shell-settings-row strong { font-size:0.88rem; }
+    .shell-settings-row small { margin-top:3px; color:var(--text-muted); font-size:0.72rem; }
+    .shell-toggle { border:1px solid var(--border); border-radius:999px; padding:8px 12px; color:var(--text-muted); background:var(--surface2); cursor:pointer; font-size:0.72rem; font-weight:700; }
+    .shell-toggle.is-on { color:#fff; background:linear-gradient(135deg,#7c3aed,#ec4899); border-color:transparent; }
+    body:not(.team-mode) #orderBannerCard, body:not(.team-mode) #orderQueueCard { display:none; }
+    .right-panel-head { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; padding:4px 2px 10px; }
+    .right-panel-head strong, .right-panel-head .eyebrow { display:block; }
+    .right-panel-head strong { margin-top:3px; font-size:1rem; }
+    .eyebrow { color:var(--accent2); font-size:0.62rem; font-weight:800; letter-spacing:0.16em; }
+    .right-panel-tabs { display:flex; gap:4px; }
+    .right-panel-tab { border:0; border-radius:7px; padding:6px 7px; background:transparent; color:var(--text-muted); cursor:pointer; font-size:0.66rem; }
+    .right-panel-tab.active { color:var(--text); background:rgba(167,139,250,0.16); }
+    .right-panel-placeholder { min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:28px; border:1px dashed var(--border); border-radius:var(--radius); color:var(--text-muted); text-align:center; }
+    .col-right:not(.panel-only-placeholder) .right-panel-placeholder { display:none; }
+    .col-right.panel-only-placeholder > .card { display:none; }
+    .personal-player-bar { position:fixed; left:calc(var(--shell-sidebar) + 16px); right:16px; bottom:14px; z-index:50; min-height:var(--shell-player); display:grid; grid-template-columns:minmax(180px,1fr) auto minmax(220px,1.2fr) auto; align-items:center; gap:18px; padding:11px 16px; border:1px solid rgba(255,255,255,0.12); border-radius:18px; background:rgba(18,15,27,0.92); box-shadow:0 16px 50px rgba(0,0,0,0.35); backdrop-filter:blur(22px); }
+    body.sidebar-collapsed .personal-player-bar { left:80px; }
+    .mini-track-info, .mini-actions, .mini-controls, .mini-seek-wrap { display:flex; align-items:center; }
+    .mini-track-info { min-width:0; gap:10px; }
+    .mini-cover { width:46px; height:46px; flex:0 0 46px; overflow:hidden; border-radius:9px; background:var(--surface2); }
+    .mini-cover img { width:100%; height:100%; object-fit:cover; }
+    .mini-copy { min-width:0; }
+    .mini-copy strong, .mini-copy span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mini-copy strong { font-size:0.78rem; }
+    .mini-copy span { margin-top:3px; color:var(--text-muted); font-size:0.68rem; }
+    .mini-controls { justify-content:center; gap:4px; }
+    .mini-control { width:30px; height:30px; border:0; border-radius:50%; background:transparent; color:var(--text-muted); cursor:pointer; }
+    .mini-control:hover, .mini-control.is-on { color:var(--text); background:rgba(167,139,250,0.16); }
+    .mini-play { width:36px; height:36px; color:#fff; background:var(--accent); }
+    .mini-play:hover { color:#fff; background:var(--accent2); }
+    .mini-seek-wrap { min-width:0; gap:8px; color:var(--text-muted); font-size:0.63rem; }
+    .mini-seek-wrap input { flex:1; min-width:60px; }
+    .mini-actions { justify-content:flex-end; gap:8px; }
+    .mini-actions input { width:76px; }
+    .mini-volume-icon { font-size:0.75rem; }
+    input[type="range"] { accent-color:var(--accent2); cursor:pointer; }
+    body.now-playing-focus .col-left { position:fixed; inset:22px 22px calc(var(--shell-player) + 24px) calc(var(--shell-sidebar) + 22px); z-index:40; overflow:auto; background:rgba(10,9,15,0.96); padding:24px; border:1px solid var(--border); border-radius:20px; box-shadow:0 30px 100px rgba(0,0,0,0.6); }
+    body.now-playing-focus .col-right { opacity:0.2; pointer-events:none; }
+    body.light-theme { --surface:#fff; --surface2:#f2f3f8; --text:#20202b; --text-muted:#66677a; --border:#dedee8; --shell-surface:rgba(255,255,255,0.9); background:linear-gradient(180deg,#f8f7ff,#eef0f8); }
+    body.light-theme .app-sidebar, body.light-theme .personal-player-bar { background:rgba(255,255,255,0.82); }
+    @media (max-width: 1100px) { .personal-player-bar { grid-template-columns:minmax(160px,1fr) auto minmax(160px,1fr); } .mini-actions { display:none; } }
+    @media (max-width: 760px) {
+      body, body.sidebar-collapsed { display:block; padding-bottom:94px; }
+      .app-sidebar { position:fixed; left:0; top:0; width:240px; transform:translateX(-102%); transition:transform .2s ease; }
+      body.mobile-nav-open .app-sidebar { transform:translateX(0); }
+      .app-shell, body.sidebar-collapsed .app-shell { width:100%; margin-left:0; padding-top:12px; }
+      .app-header, .resume-banner, .main-layout { width:calc(100% - 24px); }
+      .main-layout { grid-template-columns:1fr; }
+      .home-insights-grid { grid-template-columns:1fr; }
+      .col-right { position:static; max-height:none; overflow:visible; }
+      .personal-player-bar, body.sidebar-collapsed .personal-player-bar { left:8px; right:8px; bottom:8px; grid-template-columns:1fr auto; gap:8px; padding:9px 10px; }
+      .mini-seek-wrap { grid-column:1 / -1; grid-row:2; }
+      .mini-controls { justify-content:flex-end; }
+      .mini-controls .mini-control:first-child, .mini-controls .mini-control:last-child { display:none; }
+      .app-header { flex-wrap:wrap; }
+      .mobile-nav-toggle { display:block; }
+      .header-actions { width:100%; overflow:auto; }
+      body.now-playing-focus .col-left { inset:10px 10px 105px 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } .audio-visualizer { display:none; } }
   </style>
 </head>
 <body>
+
+  <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
+    <div class="sidebar-brand">
+      <img src="/favicon.png" alt="MyMusic" />
+      <div><strong>MyMusic</strong><small>Personal Player</small></div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link active" data-route="home"><span>⌂</span><b>Home</b></button>
+      <button class="sidebar-link" data-route="library"><span>♫</span><b>Thư viện</b></button>
+      <button class="sidebar-link" data-route="playlists"><span>▣</span><b>Playlist</b></button>
+      <button class="sidebar-link" data-route="favorites"><span>♡</span><b>Yêu thích</b></button>
+      <button class="sidebar-link" data-route="history"><span>◷</span><b>Lịch sử</b></button>
+      <button class="sidebar-link" data-route="stats"><span>▥</span><b>Thống kê</b></button>
+      <button class="sidebar-link" data-route="settings"><span>⚙</span><b>Settings</b></button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-link sidebar-theme-toggle" id="sidebarThemeToggle"><span>◐</span><b>Light theme</b></button>
+      <button class="sidebar-collapse" id="sidebarCollapse" title="Thu gọn sidebar">‹</button>
+    </div>
+  </aside>
 
   <canvas id="audioVisualizer" class="audio-visualizer" aria-hidden="true"></canvas>
 
@@ -1325,6 +1487,7 @@
     </button>
   </div>
 
+  <div class="app-shell" id="appShell">
   <!-- Resume Banner -->
   <div class="resume-banner hidden" id="resumeBanner" style="max-width:1100px;">
     <p>🕐 Hôm qua dừng ở <span id="resumeLabel">—</span> — Tiếp tục?</p>
@@ -1332,10 +1495,12 @@
       <button class="btn btn-primary" id="resumeYes">✅ Tiếp tục</button>
       <button class="btn btn-ghost" id="resumeNo">🔄 Phát từ đầu</button>
     </div>
+    <button class="resume-dismiss" id="resumeDismiss" type="button" aria-label="Đóng thông báo tiếp tục nghe" title="Đóng">×</button>
   </div>
 
   <!-- App Header -->
   <div class="app-header">
+    <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Mở menu">☰</button>
     <img src="/favicon.png" alt="Logo" class="app-header-logo" id="logo" />
     <h1>MyMusic Player</h1>
     <span class="badge">MyMusic Internal</span>
@@ -1352,7 +1517,7 @@
 
     <!-- TOP FULL WIDTH: Sheet + Mode + Filter -->
     <div class="col-top">
-      <div class="card">
+      <div class="card" id="settingsCard">
         <div class="card-section">
           <div class="sheet-row">
             <input type="text" id="sheetUrl" placeholder="Dán Google Sheet URL hoặc CSV URL vào đây…" />
@@ -1365,6 +1530,10 @@
 
         <!-- Mode -->
         <div class="card-section">
+          <div class="shell-settings-row">
+            <div><strong>Cài đặt phát nhạc</strong><small>Team mode giữ lại các tính năng order cũ</small></div>
+            <button class="shell-toggle" id="teamModeToggle" type="button" aria-pressed="false">Team mode: OFF</button>
+          </div>
           <div class="controls-row">
             <div class="control-group">
               <span class="label-sm">Chế độ</span>
@@ -1441,10 +1610,39 @@
         </div>
       </div>
 
+      <div class="home-insights-card" aria-label="Tổng quan nghe nhạc">
+        <div class="home-insights-heading">
+          <div><span class="eyebrow">YOUR LISTENING</span><strong>Không gian nghe nhạc cá nhân</strong></div>
+          <span class="home-insights-badge">PERSONAL</span>
+        </div>
+        <div class="home-insights-grid">
+          <div class="home-insight-tile">
+            <span class="home-insight-icon">↻</span>
+            <div><small>Tiếp tục nghe</small><strong id="shellContinueLabel">Bài đang phát</strong></div>
+          </div>
+          <div class="home-insight-tile">
+            <span class="home-insight-icon">◷</span>
+            <div><small>Nghe gần đây</small><strong id="shellRecentLabel">Chưa có lịch sử</strong></div>
+          </div>
+          <div class="home-insight-tile">
+            <span class="home-insight-icon">♬</span>
+            <div><small>Playlist hiện tại</small><strong id="shellPlaylistLabel">0 bài hát</strong></div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /col-left -->
 
     <!-- RIGHT COL: Order banner + Queue + Playlist -->
     <div class="col-right">
+      <div class="right-panel-head">
+        <div><span class="eyebrow">YOUR SPACE</span><strong id="rightPanelTitle">Queue</strong></div>
+        <div class="right-panel-tabs" role="tablist">
+          <button class="right-panel-tab active" data-panel-tab="queue">Queue</button>
+          <button class="right-panel-tab" data-panel-tab="lyrics">Lyrics</button>
+          <button class="right-panel-tab" data-panel-tab="now-playing">Đang phát</button>
+        </div>
+      </div>
 
       <!-- Order Banner Card -->
       <div class="card" id="orderBannerCard" style="background: rgba(251, 146, 60, 0.18); border-color: rgba(251, 146, 60, 0.7); box-shadow: 0 0 18px rgba(251, 146, 60, 0.25), inset 0 0 20px rgba(251, 146, 60, 0.06);">
@@ -1512,6 +1710,32 @@
     </div><!-- /col-right -->
 
   </div><!-- /main-layout -->
+  </div><!-- /app-shell -->
+
+  <div class="personal-player-bar" id="personalPlayerBar">
+    <div class="mini-track-info">
+      <div class="mini-cover"><img id="miniPlayerCover" src="/favicon.png" alt="Cover" /></div>
+      <div class="mini-copy"><strong id="miniPlayerTitle">Chưa phát bài nào</strong><span id="miniPlayerArtist">MyMusic Player</span></div>
+    </div>
+    <div class="mini-controls">
+      <button class="mini-control" id="miniShuffle" title="Shuffle">⌘</button>
+      <button class="mini-control" id="miniPrev" title="Bài trước">⏮</button>
+      <button class="mini-control mini-play" id="miniPlay" title="Phát/Tạm dừng">▶</button>
+      <button class="mini-control" id="miniNext" title="Bài tiếp">⏭</button>
+      <button class="mini-control" id="miniRepeat" title="Lặp lại">↻</button>
+    </div>
+    <div class="mini-seek-wrap">
+      <span id="miniElapsed">0:00</span>
+      <input id="miniSeek" type="range" min="0" max="100" value="0" aria-label="Tiến trình bài hát" />
+      <span id="miniDuration">0:00</span>
+    </div>
+    <div class="mini-actions">
+      <span class="mini-volume-icon">🔊</span>
+      <input id="miniVolume" type="range" min="0" max="100" value="80" aria-label="Âm lượng" />
+      <button class="mini-control" id="miniPanel" title="Đóng/mở panel">▣</button>
+      <button class="mini-control" id="miniFullscreen" title="Now Playing">⛶</button>
+    </div>
+  </div>
 
   <!-- Stats & Dashboard Modal -->
   <div class="modal-overlay" id="statsOverlay">
@@ -3973,5 +4197,6 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
+<script src="/app-shell.js"></script>
 </body>
 </html>
