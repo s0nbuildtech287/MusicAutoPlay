@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
+  <link rel="stylesheet" href="/home-portal.css?v=6" />
   <style>
     /* ─── Reset & Base ─── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1370,6 +1371,33 @@
     .home-insight-tile small, .home-insight-tile strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .home-insight-tile small { color:var(--text-muted); font-size:0.65rem; }
     .home-insight-tile strong { margin-top:3px; font-size:0.72rem; }
+    .route-workspace { width:calc(100% - 48px); margin:18px auto 0; padding:22px; border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius); background:linear-gradient(135deg,rgba(124,106,247,0.13),rgba(236,72,153,0.06)); box-shadow:0 14px 40px rgba(0,0,0,0.18); }
+    .route-workspace[hidden] { display:none; }
+    .route-workspace-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
+    .route-workspace h2 { margin:5px 0 0; font-size:1.35rem; }
+    .route-workspace p { margin:7px 0 0; color:var(--text-muted); font-size:0.8rem; line-height:1.5; }
+    .route-workspace-badge { padding:6px 10px; border:1px solid rgba(192,132,252,0.35); border-radius:999px; color:var(--accent2); font-size:0.65rem; font-weight:800; letter-spacing:0.08em; white-space:nowrap; }
+    .route-workspace-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .route-tile { min-height:108px; padding:15px; border:1px solid rgba(255,255,255,0.09); border-radius:14px; background:rgba(15,13,25,0.42); }
+    .route-tile-icon { font-size:1.35rem; }
+    .route-tile strong { display:block; margin-top:10px; font-size:0.85rem; }
+    .route-tile small { display:block; margin-top:5px; color:var(--text-muted); font-size:0.72rem; line-height:1.4; }
+    .home-add-track { width:calc(100% - 48px); margin:18px auto 0; padding:14px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(18,15,30,0.78); }
+    .home-add-track form { display:flex; align-items:center; gap:8px; }
+    .home-add-track input { min-width:0; flex:1; height:40px; padding:0 13px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:var(--surface2); outline:none; }
+    .home-add-track input:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(192,132,252,0.12); }
+    .home-add-track small { display:block; margin:0 0 9px 2px; color:var(--text-muted); font-size:0.72rem; }
+    #settingsCard .sheet-row { display:none; }
+    body[data-route="library"] .home-add-track, body[data-route="playlists"] .home-add-track, body[data-route="favorites"] .home-add-track { display:none; }
+    @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
+    @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
+    body.stats-view #statsOverlay .history-section { display:none; }
+    body.history-view #statsOverlay .stats-grid,
+    body.history-view #statsOverlay .leaderboard-section,
+    body.history-view #statsOverlay .stats-footer { display:none; }
+    body.history-view #statsOverlay.active { position:relative; inset:auto; display:block; width:100%; min-height:0; padding:0 16px 110px; background:transparent; pointer-events:auto; }
+    body.history-view #statsOverlay.active .stats-modal { max-width:900px; margin:20px auto 0; box-shadow:0 18px 50px rgba(0,0,0,.25); }
+    body.history-view #statsOverlay .close-modal-btn { display:none; }
     .col-right { min-width:0; max-height:calc(100vh - 126px); overflow:auto; position:sticky; top:16px; }
     body.right-panel-hidden .col-right { display:none; }
     body.right-panel-hidden .main-layout { grid-template-columns:minmax(0,1fr); }
@@ -1512,7 +1540,18 @@
     </div>
   </div>
 
+  <section class="home-add-track" id="homeAddTrack">
+    <small>THÊM NHẠC VÀO THƯ VIỆN</small>
+    <form id="youtubeAddForm">
+      <input id="youtubeAddUrl" type="url" placeholder="Dán link YouTube vào đây để thêm bài hát…" autocomplete="off" required />
+      <input id="youtubeAddTitle" type="text" placeholder="Tên bài (không bắt buộc)" autocomplete="off" />
+      <button class="btn btn-primary" id="youtubeAddBtn" type="submit">＋ Thêm bài</button>
+    </form>
+  </section>
+
   <!-- ─── Main 2-column layout ─── -->
+  <section class="route-workspace" id="routeWorkspace" hidden aria-live="polite"></section>
+
   <div class="main-layout">
 
     <!-- TOP FULL WIDTH: Sheet + Mode + Filter -->
@@ -1865,7 +1904,7 @@ const ORDER_TITLE_CACHE_KEY = 'lotusquant_order_title_cache';
 const ORDERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAM339YHc5jgmAVGiyiFJLhIdBM9AgGIXmsiI6LlsC0asWMYOpeqYOdYIDOIS-YTZo759-Bw7cJfUl/pub?gid=19947411&single=true&output=csv';
 const DEFAULT_ORDER_PUBLIC_URL = 'https://script.google.com/macros/s/AKfycbwW1hNIHd5ck7xf_EQ407AWgikYELJqdqgOf0rQsIRUDPWTm51N2eevMLMPcCAkPO0Z0g/exec';
 const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI/edit?gid=0#gid=0';
-const LEGACY_DEFAULT_SHEET_IDS = ['1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM'];
+const LEGACY_DEFAULT_SHEET_IDS = ['1P_LMInRLMTjycdazok0fvRGNAsgRzMHNfK3svktA7SM', '1Vyxn-O8yR2UrJZ69tMHip7dFc6RRPqlnqpidxL2INgI'];
 
 const fallbackTracks = [
   'https://cdn.jsdelivr.net/gh/himalayasingh/music-player-1@master/music/1.mp3',
@@ -1923,24 +1962,11 @@ const demoSongsList = [
 ];
 
 function isOnlineDemoMode() {
-  const host = window.location.hostname;
-  return host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.');
+  return false;
 }
 
 function getAudioStreamUrl(vid, songTitle) {
-  if (!isOnlineDemoMode()) {
-    return `/api/stream?id=${vid}`;
-  }
-  const found = demoSongsList.find(s => s.vid === vid);
-  if (found) return found.url;
-  
-  let hash = 0;
-  const key = String(vid || songTitle || 'default');
-  for (let i = 0; i < key.length; i++) {
-    hash = key.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % fallbackTracks.length;
-  return fallbackTracks[index];
+  return `/api/stream?id=${encodeURIComponent(vid || '')}`;
 }
 
 function loadDemoPlaylist() {
@@ -1997,6 +2023,77 @@ const resumeYes    = $('resumeYes');
 const resumeNo     = $('resumeNo');
 const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
+const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
+const MUSIC_USER_KEY = 'mymusic_user';
+
+function getMusicUser() {
+  const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
+  try {
+    const user = JSON.parse(raw);
+    return { userId: user.username || user.userId || 'guest', displayName: user.displayName || user.name || user.username || 'Guest' };
+  } catch (_) {
+    return { userId: raw || 'guest', displayName: raw || 'Guest' };
+  }
+}
+
+function applySheetSongs(songs) {
+  state.songs = (songs || []).filter(song => song && song.url && song.vid).map((song, index) => ({
+    stt: index + 1, name: song.userId || getMusicUser().displayName, title: song.title || song.vid, artist: song.artist || 'YouTube', url: song.url, vid: song.vid
+  }));
+  state.members = [...new Set(state.songs.map(song => song.name))];
+  state.activeMembers = new Set(state.members);
+  renderFilterChips();
+  buildPlaylist();
+}
+
+async function bootstrapMusicLibrary() {
+  const user = getMusicUser();
+  const callbackName = `myMusicSheetCallback_${Date.now()}`;
+  const query = new URLSearchParams({ action: 'bootstrap', userId: user.userId, displayName: user.displayName, callback: callbackName, t: String(Date.now()) });
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
+  const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
+  window[callbackName] = data => { if (data && data.ok) applySheetSongs(data.songs || []); cleanup(); };
+  script.onerror = cleanup;
+  script.src = `${MUSIC_SHEET_API}?${query}`;
+  document.head.appendChild(script);
+}
+
+async function saveSongToSheet(song) {
+  const user = getMusicUser();
+  const payload = JSON.stringify({ action: 'addSong', userId: user.userId, displayName: user.displayName, playlistId: '', title: song.title, artist: song.artist, url: song.url, vid: song.vid });
+  await fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
+}
+
+(function initYoutubeAddForm() {
+  const form = $('youtubeAddForm');
+  const urlInput = $('youtubeAddUrl');
+  const titleInput = $('youtubeAddTitle');
+  const button = $('youtubeAddBtn');
+  if (!form || !urlInput) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const url = urlInput.value.trim();
+    const vid = extractVideoId(url);
+    if (!vid) { toast('⚠️ Link YouTube không hợp lệ'); return; }
+    const song = { stt: state.songs.length + 1, name: getMusicUser().displayName, title: titleInput.value.trim() || vid, artist: 'YouTube', url, vid };
+    button.disabled = true;
+    try {
+      await saveSongToSheet(song);
+      state.songs.push(song);
+      state.members = [...new Set([...state.members, song.name])];
+      state.activeMembers.add(song.name);
+      renderFilterChips();
+      buildPlaylist();
+      urlInput.value = '';
+      titleInput.value = '';
+      toast('✅ Đã thêm bài hát vào thư viện');
+    } catch (error) {
+      console.error(error);
+      toast('⚠️ Không thể lưu bài hát vào Sheet');
+    } finally { button.disabled = false; }
+  });
+})();
 
 // ─── Layout Toggle ───────────────────────────────────────
 const layoutBtn  = $('layoutBtn');
@@ -3335,7 +3432,7 @@ audioEl.addEventListener('error', () => {
   const song = state.currentOrderSong || state.playlist[state.currentIndex];
   if (song) {
     // If it fails, check if we can try a demo fallback first
-    if (!audioEl.src.includes('jsdelivr.net')) {
+    if (false) {
       toast(`⚠️ Lỗi stream từ YouTube, đang thử nhạc dự phòng...`);
       let hash = 0;
       const key = String(song.vid || song.title || 'default');
@@ -3440,22 +3537,14 @@ function checkResume() {
 }
 
 function loadSavedUrl() {
-  if (isOnlineDemoMode()) {
-    loadDemoPlaylist();
-    return;
-  }
   const saved = localStorage.getItem('mcp_sheetUrl');
   const shouldUseDefault = !saved || LEGACY_DEFAULT_SHEET_IDS.some(id => saved.includes(id));
-  
   if (shouldUseDefault) {
-    sheetUrl.value = DEFAULT_SHEET_URL;
-    localStorage.setItem('mcp_sheetUrl', DEFAULT_SHEET_URL);
-  } else {
-    sheetUrl.value = saved;
+    localStorage.removeItem('mcp_sheetUrl');
+    sheetUrl.value = '';
+    return;
   }
-  
-  // Auto-load sheet if saved URL exists
-  setTimeout(() => loadSheet(), 500);
+  sheetUrl.value = saved;
 }
 
 saveUrlBtn.addEventListener('click', () => {
@@ -4179,6 +4268,7 @@ if (resetStatsBtn) {
 //  INIT
 // ═══════════════════════════════════════════════════════
 loadSavedUrl();
+bootstrapMusicLibrary();
 updateVolume(80);
 resizeVisualizer();
 if (visualizerCtx && !visualizerRaf) {
@@ -4197,6 +4287,8 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
-<script src="/app-shell.js"></script>
+<script src="/app-shell.js?v=3"></script>
+  <!-- Home Landing Portal & Auth System -->
+  <script src="/home-portal.js?v=7"></script>
 </body>
 </html>

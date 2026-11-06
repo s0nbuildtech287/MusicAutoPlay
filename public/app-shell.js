@@ -13,6 +13,21 @@
   const npContent = $('npContent');
   const npAvatar = $('npAvatar');
   const colRight = document.querySelector('.col-right');
+  const routeWorkspace = $('routeWorkspace');
+
+  function renderRouteWorkspace(route) {
+    if (!routeWorkspace) return;
+    const count = $('playlistCount')?.textContent?.trim() || '0 bài';
+    const views = {
+      library: { eyebrow: 'YOUR LIBRARY', title: 'Thư viện nhạc', badge: 'LIBRARY', description: 'Tập trung toàn bộ bài hát đang có trong Sheet và trạng thái phát hiện tại.', tiles: [['🎵', 'Toàn bộ bài hát', count], ['🔎', 'Tìm kiếm nhanh', 'Tìm theo tên bài hoặc ca sĩ ở khung Queue'], ['▶️', 'Phát ngay', 'Chọn một bài trong danh sách để bắt đầu nghe']] },
+      playlists: { eyebrow: 'YOUR PLAYLISTS', title: 'Playlist & chủ đề', badge: 'PLAYLISTS', description: 'Khu vực dành cho các danh sách nhạc riêng theo chủ đề của bạn.', tiles: [['📁', 'Playlist hiện tại', count], ['🗂️', 'Theo chủ đề', 'Các bài hát được nhóm theo playlist trong dữ liệu'], ['➕', 'Thêm playlist', 'Tạo playlist mới sẽ được kết nối với dữ liệu tài khoản']] },
+      favorites: { eyebrow: 'YOUR FAVORITES', title: 'Bài hát yêu thích', badge: 'FAVORITES', description: 'Những bài bạn đánh dấu yêu thích sẽ được gom riêng tại đây.', tiles: [['💜', 'Đã yêu thích', 'Đồng bộ theo tài khoản hiện tại'], ['📌', 'Lưu để nghe lại', 'Bấm biểu tượng yêu thích trên bài hát để lưu'], ['🔁', 'Nghe lại', 'Các bài đã lưu luôn sẵn sàng trong playlist']] }
+    };
+    const view = views[route];
+    if (!view) { routeWorkspace.hidden = true; routeWorkspace.innerHTML = ''; return; }
+    routeWorkspace.hidden = false;
+    routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">${view.eyebrow}</span><h2>${view.title}</h2><p>${view.description}</p></div><span class="route-workspace-badge">${view.badge}</span></div><div class="route-workspace-grid">${view.tiles.map(([icon, title, text]) => `<article class="route-tile"><div class="route-tile-icon">${icon}</div><strong>${title}</strong><small>${text}</small></article>`).join('')}</div>`;
+  }
 
   const notify = (message) => {
     const container = $('toast-container');
@@ -26,22 +41,25 @@
 
   function setRoute(route) {
     const cleanRoute = route || 'home';
+    body.dataset.route = cleanRoute;
+    renderRouteWorkspace(cleanRoute);
     document.querySelectorAll('[data-route]').forEach((link) => {
       link.classList.toggle('active', link.dataset.route === cleanRoute);
     });
 
     body.classList.toggle('settings-open', cleanRoute === 'settings');
+    body.classList.toggle('history-view', cleanRoute === 'history');
+    body.classList.toggle('stats-view', cleanRoute === 'stats');
+    if (!['history', 'stats'].includes(cleanRoute)) $('statsOverlay')?.classList.remove('active');
     if (cleanRoute === 'settings') {
       $('settingsCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (cleanRoute === 'library') {
-      $('playlistList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (cleanRoute === 'stats') {
       $('statsBtn')?.click();
+      setTimeout(() => { const title = document.querySelector('#statsOverlay .stats-header h2'); if (title) title.textContent = '📊 Thống kê nghe nhạc'; }, 0);
     } else if (cleanRoute === 'history') {
       $('statsBtn')?.click();
+      setTimeout(() => { const title = document.querySelector('#statsOverlay .stats-header h2'); if (title) title.textContent = '◷ Lịch sử nghe nhạc'; }, 0);
       setTimeout(() => $('statsHistoryList')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
-    } else if (['playlists', 'favorites'].includes(cleanRoute)) {
-      notify(cleanRoute === 'playlists' ? 'Playlist cá nhân sẽ được bổ sung ở Giai đoạn 2' : 'Yêu thích sẽ được bổ sung ở Giai đoạn 2');
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -56,6 +74,14 @@
   });
   window.addEventListener('hashchange', () => setRoute(window.location.hash.replace(/^#\//, '') || 'home'));
   setRoute(window.location.hash.replace(/^#\//, '') || 'home');
+  $('statsBtn')?.addEventListener('click', () => {
+    if (window.location.hash !== '#/history') {
+      body.classList.remove('history-view');
+      body.classList.add('stats-view');
+      const title = document.querySelector('#statsOverlay .stats-header h2');
+      if (title) title.textContent = '📊 Thống kê nghe nhạc';
+    }
+  });
 
   const collapsed = localStorage.getItem('musicPlayerShellCollapsed') === '1';
   body.classList.toggle('sidebar-collapsed', collapsed);
