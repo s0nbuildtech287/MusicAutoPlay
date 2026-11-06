@@ -3,6 +3,7 @@ const SHEETS = {
   users: ["Users", ["userId", "displayName", "createdAt", "lastSeenAt"]],
   playlists: ["Playlists", ["id", "userId", "name", "topic", "createdAt"]],
   songs: ["Songs", ["id", "userId", "playlistId", "title", "artist", "url", "vid", "createdAt"]],
+  libraryHidden: ["LibraryHidden", ["userId", "vid", "hiddenAt"]],
   favorites: ["Favorites", ["userId", "vid", "songJson", "createdAt"]],
   history: ["History", ["userId", "vid", "title", "artist", "playlistId", "isOrder", "playedAt"]]
 };
@@ -71,8 +72,32 @@ function initSetupSheet() {
   Logger.log("MyMusic database initialized");
 }
 
+function repairSongTitles_() {
+  const sheet = sheet_("songs");
+  const values = sheet.getDataRange().getValues();
+  const headers = values.shift() || SHEETS.songs[1];
+  const titleCol = headers.indexOf("title");
+  const urlCol = headers.indexOf("url");
+  const vidCol = headers.indexOf("vid");
+  let repaired = 0;
+  values.forEach((row, index) => {
+    const currentTitle = String(row[titleCol] || "").trim();
+    const videoId = String(row[vidCol] || "").trim();
+    if (!videoId || (currentTitle && currentTitle !== videoId)) return;
+    const title = youtubeTitle_(row[urlCol], videoId);
+    if (title && title !== currentTitle) {
+      sheet.getRange(index + 2, titleCol + 1).setValue(title);
+      repaired += 1;
+    }
+  });
+  return repaired;
+}
+
 function doGet(e) {
   const p = e.parameter || {};
+  if (p.action === "repairTitles") {
+    return response_({ ok: true, repaired: repairSongTitles_() }, e);
+  }
   if ((p.action || "bootstrap") !== "bootstrap") return json_({ ok: false, error: "Unknown action" });
   const userId = ensureUser_(p.userId || "guest", p.displayName || "");
   let playlists = rows_("playlists").filter((row) => !row.userId || String(row.userId) === userId);
@@ -82,11 +107,13 @@ function doGet(e) {
     playlists = [playlist];
   }
   const playlistIds = new Set(playlists.map((row) => String(row.id)));
+  const libraryHidden = rows_("libraryHidden").filter((row) => String(row.userId) === userId).map((row) => String(row.vid));
   return response_({
     ok: true,
     users: rows_("users").filter((row) => String(row.userId) === userId),
     playlists,
-    songs: rows_("songs").filter((row) => !row.userId || String(row.userId) === userId || playlistIds.has(String(row.playlistId))),
+    songs: rows_("songs").filter((row) => !libraryHidden.includes(String(row.vid)) && (!row.userId || String(row.userId) === userId || playlistIds.has(String(row.playlistId)))),
+    libraryHidden,
     favorites: rows_("favorites").filter((row) => String(row.userId) === userId),
     history: rows_("history").filter((row) => String(row.userId) === userId).slice(-500)
   }, e);
@@ -107,6 +134,13 @@ function doPost(e) {
       const song = { id: Utilities.getUuid(), userId, playlistId: body.playlistId || "", title, artist: body.artist || "YouTube", url: body.url, vid: body.vid, createdAt: now };
       append_("songs", song);
       return json_({ ok: true, song });
+    }
+    if (body.action === "removeFromLibrary") {
+      const vid = String(body.vid || body.song?.vid || "").trim();
+      if (!vid) return json_({ ok: false, error: "Missing video id" });
+      const exists = rows_("libraryHidden").some((row) => String(row.userId) === userId && String(row.vid) === vid);
+      if (!exists) append_("libraryHidden", { userId, vid, hiddenAt: now });
+      return json_({ ok: true, vid });
     }
     if (body.action === "toggleFavorite") {
       const sheet = sheet_("favorites");

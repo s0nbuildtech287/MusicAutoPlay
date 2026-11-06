@@ -1371,7 +1371,7 @@
     .home-insight-tile small, .home-insight-tile strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .home-insight-tile small { color:var(--text-muted); font-size:0.65rem; }
     .home-insight-tile strong { margin-top:3px; font-size:0.72rem; }
-    .player-waveform { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:.42; z-index:0; }
+    .player-waveform { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:1; z-index:0; background:transparent !important; mix-blend-mode:screen; }
     .now-playing { position:relative; overflow:hidden; }
     .now-playing > *:not(.player-waveform) { position:relative; z-index:1; }
     .playlist-picker-modal { max-width:560px; }
@@ -1392,6 +1392,8 @@
     .route-tile-icon { font-size:1.35rem; }
     .route-tile strong { display:block; margin-top:10px; font-size:0.85rem; }
     .route-tile small { display:block; margin-top:5px; color:var(--text-muted); font-size:0.72rem; line-height:1.4; }
+    .library-remove-btn { flex:0 0 auto; width:30px; height:30px; border:1px solid rgba(248,113,113,.28); border-radius:8px; color:#f87171; background:rgba(248,113,113,.08); cursor:pointer; }
+    .library-remove-btn:hover { color:#fff; background:#dc2626; border-color:#ef4444; }
     .home-add-track { width:calc(100% - 48px); margin:16px auto 22px; padding:14px 18px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(18,15,30,0.78); box-shadow:0 8px 30px rgba(0,0,0,0.22); backdrop-filter:blur(16px); }
     .home-add-track form { display:flex; align-items:center; gap:8px; }
     .home-add-track input { min-width:0; flex:1; height:40px; padding:0 13px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:var(--surface2); outline:none; }
@@ -1399,6 +1401,11 @@
     .home-add-track small { display:block; margin:0 0 9px 2px; color:var(--accent2); font-size:0.72rem; font-weight:700; letter-spacing:0.08em; }
     #settingsCard .sheet-row { display:none; }
     body:not([data-route="home"]) .home-add-track { display:none !important; }
+    body[data-route="library"] .route-workspace { display:none; }
+    body[data-route="library"] .col-left { display:none; }
+    body[data-route="library"] .main-layout { grid-template-columns:minmax(0,1fr); }
+    body[data-route="library"] .col-right { max-height:none; position:static; overflow:visible; }
+    body[data-route="library"] .personal-player-bar { display:none; }
     @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); margin:12px auto 16px; } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
     @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); margin:12px auto 16px; padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
     body.stats-view #statsOverlay .history-section { display:none; }
@@ -2044,7 +2051,7 @@ const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
 const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
 const MUSIC_USER_KEY = 'mymusic_user';
-const musicDb = { playlists: [], favorites: [] };
+const musicDb = { playlists: [], favorites: [], libraryHidden: [] };
 
 function getMusicUser() {
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
@@ -2073,7 +2080,7 @@ async function bootstrapMusicLibrary() {
   const script = document.createElement('script');
   const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
   const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
-  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); } cleanup(); };
+  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.libraryHidden = data.libraryHidden || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); } cleanup(); };
   script.onerror = cleanup;
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
@@ -2130,6 +2137,20 @@ function initMiniMusicActions() {
   });
 }
 initMiniMusicActions();
+
+async function removeSongFromLibrary(song, event) {
+  event?.stopPropagation();
+  if (!song?.vid) return;
+  if (!confirm(`Xóa "${song.title || song.vid}" khỏi thư viện? Bài vẫn giữ trong Yêu thích và Playlist.`)) return;
+  await postMusicAction({ action: 'removeFromLibrary', vid: song.vid });
+  musicDb.libraryHidden = [...new Set([...musicDb.libraryHidden, String(song.vid)])];
+  state.songs = state.songs.filter(item => String(item.vid) !== String(song.vid));
+  state.members = [...new Set(state.songs.map(item => item.name))];
+  state.activeMembers = new Set(state.members);
+  renderFilterChips();
+  buildPlaylist(true);
+  toast('Đã xóa khỏi thư viện');
+}
 
 (function initYoutubeAddForm() {
   const form = $('youtubeAddForm');
@@ -2616,13 +2637,6 @@ function drawPlayerWaveform() {
   const centerY = height * 0.5;
   const pulse = (window.smoothedHeights || []).reduce((sum, value) => sum + value, 0) / 256 / 255;
   playerWaveCtx.clearRect(0, 0, width, height);
-
-  const glow = playerWaveCtx.createRadialGradient(width / 2, centerY, 4 * dpr, width / 2, centerY, width * 0.55);
-  glow.addColorStop(0, `rgba(${currentWaveTheme.glow1}, ${0.14 + pulse * 0.12})`);
-  glow.addColorStop(0.45, `rgba(${currentWaveTheme.glow2}, ${0.05 + pulse * 0.06})`);
-  glow.addColorStop(1, 'rgba(15,15,20,0)');
-  playerWaveCtx.fillStyle = glow;
-  playerWaveCtx.fillRect(0, 0, width, height);
 
   const barWidth = Math.max(2.4 * dpr, width / 240);
   const barGap = Math.max(2.8 * dpr, width / 210);
@@ -3373,8 +3387,10 @@ function renderPlaylist() {
         <div class="pl-sub">${song.artist}</div>
       </div>
       <span class="pl-member-tag">${song.name}</span>
+      ${document.body.dataset.route === 'library' ? '<button class="library-remove-btn" type="button" title="Xóa khỏi thư viện">🗑</button>' : ''}
     `;
     item.addEventListener('click', () => jumpTo(originalIndex));
+    item.querySelector('.library-remove-btn')?.addEventListener('click', event => removeSongFromLibrary(song, event));
     playlistList.appendChild(item);
   });
 
