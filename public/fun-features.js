@@ -314,12 +314,6 @@ function initFunFeatures() {
   // Setup keyboard shortcuts
   setupKeyboardShortcuts();
   
-  // Party Mode button
-  const partyBtn = document.getElementById('partyBtn');
-  if (partyBtn) {
-    partyBtn.addEventListener('click', togglePartyMode);
-  }
-  
   // Load stats from localStorage
   const savedStats = localStorage.getItem('musicPlayerStats');
   if (savedStats) {

@@ -14,6 +14,14 @@
   const npAvatar = $('npAvatar');
   const colRight = document.querySelector('.col-right');
   const routeWorkspace = $('routeWorkspace');
+  const partyButton = $('partyBtn');
+  partyButton?.addEventListener('click', () => {
+    if (typeof window.togglePartyMode === 'function') window.togglePartyMode();
+    else {
+      body.classList.toggle('party-mode');
+      partyButton.classList.toggle('active', body.classList.contains('party-mode'));
+    }
+  });
 
   function renderRouteWorkspace(route) {
     if (!routeWorkspace) return;
@@ -193,6 +201,7 @@
     if (cover && $('miniPlayerCover')) $('miniPlayerCover').src = cover;
     if (miniPlay) miniPlay.textContent = audio && !audio.paused ? 'Ⅱ' : '▶';
     if ($('shellContinueLabel')) $('shellContinueLabel').textContent = title || 'Bài đang phát';
+    if (typeof window.syncMiniMusicActions === 'function') window.syncMiniMusicActions();
   };
   const syncProgress = () => {
     if (!audio) return;

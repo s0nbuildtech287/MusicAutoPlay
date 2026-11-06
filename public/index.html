@@ -1357,8 +1357,8 @@
     .app-header { padding-top:0; }
     .mobile-nav-toggle { display:none; width:34px; height:34px; border:1px solid var(--border); border-radius:9px; color:var(--text); background:var(--surface2); cursor:pointer; }
     .app-header-logo { width:54px; height:54px; }
-    .main-layout { grid-template-columns:minmax(0,1fr) var(--shell-panel); gap:var(--shell-gap); }
-    .col-top { display:none; grid-column:1 / -1; }
+    .main-layout { grid-template-columns:minmax(0,1fr) var(--shell-panel); gap:22px var(--shell-gap); }
+    .col-top { display:none; grid-column:1 / -1; margin-bottom:4px; }
     body.settings-open .col-top { display:block; }
     .col-left { min-width:0; }
     .home-insights-card { margin-top:var(--shell-gap); padding:18px; border:1px solid rgba(255,255,255,0.09); border-radius:var(--radius); background:linear-gradient(135deg,rgba(124,106,247,0.12),rgba(236,72,153,0.06)); box-shadow:0 12px 35px rgba(0,0,0,0.16); }
@@ -1371,7 +1371,17 @@
     .home-insight-tile small, .home-insight-tile strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .home-insight-tile small { color:var(--text-muted); font-size:0.65rem; }
     .home-insight-tile strong { margin-top:3px; font-size:0.72rem; }
-    .route-workspace { width:calc(100% - 48px); margin:18px auto 0; padding:22px; border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius); background:linear-gradient(135deg,rgba(124,106,247,0.13),rgba(236,72,153,0.06)); box-shadow:0 14px 40px rgba(0,0,0,0.18); }
+    .player-waveform { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:.42; z-index:0; }
+    .now-playing { position:relative; overflow:hidden; }
+    .now-playing > *:not(.player-waveform) { position:relative; z-index:1; }
+    .playlist-picker-modal { max-width:560px; }
+    .playlist-picker-list { display:grid; gap:8px; max-height:280px; overflow:auto; }
+    .playlist-picker-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:var(--surface2); cursor:pointer; }
+    .playlist-picker-item:hover { border-color:var(--accent2); background:rgba(167,139,250,.12); }
+    .playlist-picker-item small { color:var(--text-muted); }
+    .playlist-create-row { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:14px; }
+    .playlist-create-row input { min-width:0; padding:10px 11px; border:1px solid var(--border); border-radius:9px; color:var(--text); background:var(--surface2); }
+    .route-workspace { width:calc(100% - 48px); margin:16px auto 22px; padding:22px; border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius); background:linear-gradient(135deg,rgba(124,106,247,0.13),rgba(236,72,153,0.06)); box-shadow:0 14px 40px rgba(0,0,0,0.18); backdrop-filter:blur(16px); }
     .route-workspace[hidden] { display:none; }
     .route-workspace-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
     .route-workspace h2 { margin:5px 0 0; font-size:1.35rem; }
@@ -1382,15 +1392,15 @@
     .route-tile-icon { font-size:1.35rem; }
     .route-tile strong { display:block; margin-top:10px; font-size:0.85rem; }
     .route-tile small { display:block; margin-top:5px; color:var(--text-muted); font-size:0.72rem; line-height:1.4; }
-    .home-add-track { width:calc(100% - 48px); margin:18px auto 0; padding:14px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(18,15,30,0.78); }
+    .home-add-track { width:calc(100% - 48px); margin:16px auto 22px; padding:14px 18px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(18,15,30,0.78); box-shadow:0 8px 30px rgba(0,0,0,0.22); backdrop-filter:blur(16px); }
     .home-add-track form { display:flex; align-items:center; gap:8px; }
     .home-add-track input { min-width:0; flex:1; height:40px; padding:0 13px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:var(--surface2); outline:none; }
     .home-add-track input:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(192,132,252,0.12); }
-    .home-add-track small { display:block; margin:0 0 9px 2px; color:var(--text-muted); font-size:0.72rem; }
+    .home-add-track small { display:block; margin:0 0 9px 2px; color:var(--accent2); font-size:0.72rem; font-weight:700; letter-spacing:0.08em; }
     #settingsCard .sheet-row { display:none; }
-    body[data-route="library"] .home-add-track, body[data-route="playlists"] .home-add-track, body[data-route="favorites"] .home-add-track { display:none; }
-    @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
-    @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
+    body:not([data-route="home"]) .home-add-track { display:none !important; }
+    @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); margin:12px auto 16px; } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
+    @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); margin:12px auto 16px; padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
     body.stats-view #statsOverlay .history-section { display:none; }
     body.history-view #statsOverlay .stats-grid,
     body.history-view #statsOverlay .leaderboard-section,
@@ -1422,8 +1432,8 @@
     .right-panel-placeholder { min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:28px; border:1px dashed var(--border); border-radius:var(--radius); color:var(--text-muted); text-align:center; }
     .col-right:not(.panel-only-placeholder) .right-panel-placeholder { display:none; }
     .col-right.panel-only-placeholder > .card { display:none; }
-    .personal-player-bar { position:fixed; left:calc(var(--shell-sidebar) + 16px); right:16px; bottom:14px; z-index:50; min-height:var(--shell-player); display:grid; grid-template-columns:minmax(180px,1fr) auto minmax(220px,1.2fr) auto; align-items:center; gap:18px; padding:11px 16px; border:1px solid rgba(255,255,255,0.12); border-radius:18px; background:rgba(18,15,27,0.92); box-shadow:0 16px 50px rgba(0,0,0,0.35); backdrop-filter:blur(22px); }
-    body.sidebar-collapsed .personal-player-bar { left:80px; }
+    .personal-player-bar { position:fixed; left:16px; right:16px; bottom:14px; z-index:50; min-height:var(--shell-player); display:grid; grid-template-columns:minmax(180px,1fr) auto minmax(220px,1.2fr) auto; align-items:center; gap:18px; padding:11px 16px; border:1px solid rgba(255,255,255,0.12); border-radius:18px; background:rgba(18,15,27,0.92); box-shadow:0 16px 50px rgba(0,0,0,0.35); backdrop-filter:blur(22px); }
+    body.sidebar-collapsed .personal-player-bar { left:16px; }
     .mini-track-info, .mini-actions, .mini-controls, .mini-seek-wrap { display:flex; align-items:center; }
     .mini-track-info { min-width:0; gap:10px; }
     .mini-cover { width:46px; height:46px; flex:0 0 46px; overflow:hidden; border-radius:9px; background:var(--surface2); }
@@ -1447,7 +1457,7 @@
     body.now-playing-focus .col-right { opacity:0.2; pointer-events:none; }
     body.light-theme { --surface:#fff; --surface2:#f2f3f8; --text:#20202b; --text-muted:#66677a; --border:#dedee8; --shell-surface:rgba(255,255,255,0.9); background:linear-gradient(180deg,#f8f7ff,#eef0f8); }
     body.light-theme .app-sidebar, body.light-theme .personal-player-bar { background:rgba(255,255,255,0.82); }
-    @media (max-width: 1100px) { .personal-player-bar { grid-template-columns:minmax(160px,1fr) auto minmax(160px,1fr); } .mini-actions { display:none; } }
+    @media (max-width: 1100px) { .personal-player-bar { grid-template-columns:minmax(160px,1fr) auto minmax(160px,1fr); } .mini-actions { display:flex; } .mini-actions input { width:58px; } .playlist-create-row { grid-template-columns:1fr; } }
     @media (max-width: 760px) {
       body, body.sidebar-collapsed { display:block; padding-bottom:94px; }
       .app-sidebar { position:fixed; left:0; top:0; width:240px; transform:translateX(-102%); transition:transform .2s ease; }
@@ -1469,7 +1479,7 @@
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } .audio-visualizer { display:none; } }
   </style>
 </head>
-<body>
+<body data-route="home">
 
   <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
     <div class="sidebar-brand">
@@ -1533,10 +1543,8 @@
     <h1>MyMusic Player</h1>
     <span class="badge">MyMusic Internal</span>
     <div class="header-actions">
-      <button class="layout-btn" id="layoutBtn" title="Đổi bố cục">⊞ 2 cột</button>
-      <button class="wave-color-btn" id="waveColorBtn">🎨 <span id="waveColorName">Mặc định</span></button>
+      <button class="wave-color-btn" id="waveColorBtn">🌊 <span id="waveColorName">Đại dương</span></button>
       <button class="party-btn" id="partyBtn">🎉 Party Mode</button>
-      <button class="stats-btn" id="statsBtn">📊 Thống kê</button>
     </div>
   </div>
 
@@ -1612,6 +1620,7 @@
       <div class="card">
         <!-- Now Playing -->
         <div class="card-section now-playing">
+          <canvas id="playerWaveform" class="player-waveform" aria-hidden="true"></canvas>
           <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
             <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
             <div class="np-avatar" id="npAvatar">
@@ -1769,10 +1778,20 @@
       <span id="miniDuration">0:00</span>
     </div>
     <div class="mini-actions">
+      <button class="mini-control" id="miniFavorite" title="Thêm vào yêu thích">♡</button>
+      <button class="mini-control" id="miniPlaylist" title="Thêm vào playlist">＋</button>
       <span class="mini-volume-icon">🔊</span>
       <input id="miniVolume" type="range" min="0" max="100" value="80" aria-label="Âm lượng" />
       <button class="mini-control" id="miniPanel" title="Đóng/mở panel">▣</button>
       <button class="mini-control" id="miniFullscreen" title="Now Playing">⛶</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="playlistPickerOverlay">
+    <div class="stats-modal playlist-picker-modal">
+      <div class="stats-header"><h2>Thêm vào playlist</h2><button class="close-modal-btn" id="closePlaylistPicker">&times;</button></div>
+      <div id="playlistPickerList" class="playlist-picker-list"></div>
+      <div class="playlist-create-row"><input id="newPlaylistName" type="text" placeholder="Tên playlist mới" /><input id="newPlaylistTopic" type="text" placeholder="Chủ đề" /><button class="btn btn-primary" id="createPlaylistBtn">＋ Tạo mới</button></div>
     </div>
   </div>
 
@@ -2025,6 +2044,7 @@ const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
 const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
 const MUSIC_USER_KEY = 'mymusic_user';
+const musicDb = { playlists: [], favorites: [] };
 
 function getMusicUser() {
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
@@ -2053,7 +2073,7 @@ async function bootstrapMusicLibrary() {
   const script = document.createElement('script');
   const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
   const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
-  window[callbackName] = data => { if (data && data.ok) applySheetSongs(data.songs || []); cleanup(); };
+  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); } cleanup(); };
   script.onerror = cleanup;
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
@@ -2064,6 +2084,52 @@ async function saveSongToSheet(song) {
   const payload = JSON.stringify({ action: 'addSong', userId: user.userId, displayName: user.displayName, playlistId: '', title: song.title, artist: song.artist, url: song.url, vid: song.vid });
   await fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
 }
+
+function currentMusicSong() {
+  return window.currentOrderSong || state.currentOrderSong || state.playlist[state.currentIndex] || null;
+}
+
+function postMusicAction(body) {
+  return fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, ...getMusicUser() }) });
+}
+
+function syncMiniMusicActions() {
+  const song = currentMusicSong();
+  const favorite = song && musicDb.favorites.some(item => String(item.vid) === String(song.vid));
+  const button = $('miniFavorite');
+  if (button) { button.textContent = favorite ? '♥' : '♡'; button.classList.toggle('is-on', Boolean(favorite)); }
+}
+
+function openPlaylistPicker() {
+  const song = currentMusicSong(); const overlay = $('playlistPickerOverlay'); const list = $('playlistPickerList');
+  if (!song || !overlay || !list) { toast('⚠️ Chưa có bài đang phát'); return; }
+  list.innerHTML = musicDb.playlists.length ? musicDb.playlists.map(playlist => `<button class="playlist-picker-item" data-playlist-id="${playlist.id}"><span>📁 ${escapeHTML(playlist.name)}</span><small>${escapeHTML(playlist.topic || 'Chung')}</small></button>`).join('') : '<div class="empty-playlist">Chưa có playlist nào. Hãy tạo playlist mới.</div>';
+  list.querySelectorAll('[data-playlist-id]').forEach(button => button.addEventListener('click', async () => {
+    await postMusicAction({ action: 'addSong', playlistId: button.dataset.playlistId, title: song.title, artist: song.artist, url: song.url, vid: song.vid });
+    overlay.classList.remove('active'); overlay.classList.add('hidden'); toast('✅ Đã thêm vào playlist');
+  }));
+  overlay.classList.remove('hidden'); overlay.classList.add('active');
+}
+
+function initMiniMusicActions() {
+  $('miniFavorite')?.addEventListener('click', async () => {
+    const song = currentMusicSong(); if (!song) return toast('⚠️ Chưa có bài đang phát');
+    const exists = musicDb.favorites.some(item => String(item.vid) === String(song.vid));
+    await postMusicAction({ action: 'toggleFavorite', song });
+    musicDb.favorites = exists ? musicDb.favorites.filter(item => String(item.vid) !== String(song.vid)) : [...musicDb.favorites, { vid: song.vid, songJson: JSON.stringify(song) }];
+    syncMiniMusicActions(); toast(exists ? 'Đã bỏ khỏi yêu thích' : '💜 Đã thêm vào yêu thích');
+  });
+  $('miniPlaylist')?.addEventListener('click', openPlaylistPicker);
+  $('closePlaylistPicker')?.addEventListener('click', () => { $('playlistPickerOverlay')?.classList.remove('active'); $('playlistPickerOverlay')?.classList.add('hidden'); });
+  $('playlistPickerOverlay')?.addEventListener('click', event => { if (event.target.id === 'playlistPickerOverlay') { event.currentTarget.classList.remove('active'); event.currentTarget.classList.add('hidden'); } });
+  $('createPlaylistBtn')?.addEventListener('click', async () => {
+    const name = $('newPlaylistName')?.value.trim(); const topic = $('newPlaylistTopic')?.value.trim() || 'Chung';
+    if (!name) return $('newPlaylistName')?.focus();
+    await postMusicAction({ action: 'createPlaylist', name, topic });
+    musicDb.playlists.push({ id: `local-${Date.now()}`, name, topic }); $('newPlaylistName').value = ''; $('newPlaylistTopic').value = ''; openPlaylistPicker(); toast('✅ Đã tạo playlist mới');
+  });
+}
+initMiniMusicActions();
 
 (function initYoutubeAddForm() {
   const form = $('youtubeAddForm');
@@ -2076,11 +2142,12 @@ async function saveSongToSheet(song) {
     const url = urlInput.value.trim();
     const vid = extractVideoId(url);
     if (!vid) { toast('⚠️ Link YouTube không hợp lệ'); return; }
-    const song = { stt: state.songs.length + 1, name: getMusicUser().displayName, title: titleInput.value.trim() || vid, artist: 'YouTube', url, vid };
+    const enteredTitle = titleInput.value.trim();
+    const song = { stt: state.songs.length + 1, name: getMusicUser().displayName, title: enteredTitle, artist: 'YouTube', url, vid };
     button.disabled = true;
     try {
       await saveSongToSheet(song);
-      state.songs.push(song);
+      state.songs.push({ ...song, title: enteredTitle || vid });
       state.members = [...new Set([...state.members, song.name])];
       state.activeMembers.add(song.name);
       renderFilterChips();
@@ -2111,16 +2178,8 @@ function applyLayout(mode) {
   }
 }
 
-// Load saved preference (default: grid)
-const savedLayout = localStorage.getItem('layoutMode') || 'grid';
-applyLayout(savedLayout);
-
-layoutBtn.addEventListener('click', () => {
-  const current = mainLayout.classList.contains('layout-vertical') ? 'vertical' : 'grid';
-  const next = current === 'grid' ? 'vertical' : 'grid';
-  localStorage.setItem('layoutMode', next);
-  applyLayout(next);
-});
+// Desktop uses one fixed layout; the old vertical/grid switch is intentionally disabled.
+if (layoutBtn) layoutBtn.remove();
 
 // ─── Wave Color Themes ────────────────────────────────────
 const WAVE_THEMES = [
@@ -2239,7 +2298,7 @@ const WAVE_THEMES = [
   },
 ];
 
-let currentWaveTheme = WAVE_THEMES.find(t => t.id === (localStorage.getItem('waveTheme') || 'default')) || WAVE_THEMES[0];
+let currentWaveTheme = WAVE_THEMES.find(t => t.id === (localStorage.getItem('waveTheme') || 'ocean')) || WAVE_THEMES[0];
 
 // Build popup swatches
 const waveColorPopup = $('waveColorPopup');
@@ -2285,6 +2344,8 @@ document.addEventListener('click', () => waveColorPopup.classList.add('hidden'))
 
 const visualizerCanvas = $('audioVisualizer');
 const visualizerCtx = visualizerCanvas ? visualizerCanvas.getContext('2d') : null;
+const playerWaveCanvas = $('playerWaveform');
+const playerWaveCtx = playerWaveCanvas ? playerWaveCanvas.getContext('2d') : null;
 const circularCanvas = $('circularVisualizer');
 const circularCtx = circularCanvas ? circularCanvas.getContext('2d') : null;
 let visualizerAudioContext = null;
@@ -2501,6 +2562,11 @@ function resizeVisualizer() {
     circularCtx.setTransform(1, 0, 0, 1, 0, 0); // reset scale
     circularCtx.scale(dpr, dpr);
   }
+  if (playerWaveCanvas && playerWaveCtx) {
+    const rect = playerWaveCanvas.getBoundingClientRect();
+    playerWaveCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    playerWaveCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  }
 }
 
 function ensureVisualizer() {
@@ -2539,6 +2605,62 @@ function ensureVisualizer() {
   if (!visualizerRaf) {
     visualizerRaf = requestAnimationFrame(drawVisualizer);
   }
+}
+
+function drawPlayerWaveform() {
+  if (!playerWaveCtx || !playerWaveCanvas) return;
+  const width = playerWaveCanvas.width;
+  const height = playerWaveCanvas.height;
+  if (!width || !height) return;
+  const dpr = visualizerDpr || 1;
+  const centerY = height * 0.5;
+  const pulse = (window.smoothedHeights || []).reduce((sum, value) => sum + value, 0) / 256 / 255;
+  playerWaveCtx.clearRect(0, 0, width, height);
+
+  const glow = playerWaveCtx.createRadialGradient(width / 2, centerY, 4 * dpr, width / 2, centerY, width * 0.55);
+  glow.addColorStop(0, `rgba(${currentWaveTheme.glow1}, ${0.14 + pulse * 0.12})`);
+  glow.addColorStop(0.45, `rgba(${currentWaveTheme.glow2}, ${0.05 + pulse * 0.06})`);
+  glow.addColorStop(1, 'rgba(15,15,20,0)');
+  playerWaveCtx.fillStyle = glow;
+  playerWaveCtx.fillRect(0, 0, width, height);
+
+  const barWidth = Math.max(2.4 * dpr, width / 240);
+  const barGap = Math.max(2.8 * dpr, width / 210);
+  const step = barWidth + barGap;
+  const count = Math.floor(width / step);
+  const maxHeight = height * 0.42;
+  const gradient = playerWaveCtx.createLinearGradient(0, 0, width, 0);
+  currentWaveTheme.stops.forEach(([position, color]) => gradient.addColorStop(position, color));
+
+  playerWaveCtx.save();
+  playerWaveCtx.lineCap = 'round';
+  playerWaveCtx.strokeStyle = gradient;
+  [3.5, 2, 1].forEach((multiplier, layer) => {
+    playerWaveCtx.beginPath();
+    playerWaveCtx.lineWidth = barWidth * multiplier;
+    playerWaveCtx.globalAlpha = [0.15, 0.35, 0.8][layer];
+    for (let index = 0; index < count; index += 1) {
+      const x = index * step + barWidth / 2;
+      const distance = Math.abs(index - count / 2) / (count / 2);
+      const sampleIndex = Math.min(255, Math.floor(distance * 255));
+      const rawHeight = window.smoothedHeights?.[sampleIndex] || 0;
+      const barHeight = Math.max(1.5 * dpr, (rawHeight / 255) * maxHeight);
+      playerWaveCtx.moveTo(x, centerY - barHeight);
+      playerWaveCtx.lineTo(x, centerY + barHeight);
+    }
+    playerWaveCtx.stroke();
+  });
+  playerWaveCtx.restore();
+
+  playerWaveCtx.beginPath();
+  playerWaveCtx.moveTo(0, centerY);
+  playerWaveCtx.lineTo(width, centerY);
+  playerWaveCtx.lineWidth = 5 * dpr;
+  playerWaveCtx.strokeStyle = `rgba(${currentWaveTheme.line}, 0.3)`;
+  playerWaveCtx.stroke();
+  playerWaveCtx.lineWidth = 1.2 * dpr;
+  playerWaveCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+  playerWaveCtx.stroke();
 }
 
 function drawVisualizer() {
@@ -2601,6 +2723,8 @@ function drawVisualizer() {
       window.smoothedHeights[i] = window.smoothedHeights[i] * 0.85 + target * 0.15;
     }
   }
+
+  drawPlayerWaveform();
 
   // Calculate overall volume pulse for ambient glow
   let sum = 0;
@@ -3148,6 +3272,7 @@ function toggleMember(name, chipEl, event) {
 }
 
 function renderNowPlaying() {
+  if (typeof syncMiniMusicActions === 'function') syncMiniMusicActions();
   if (state.currentOrderSong) {
     const song = state.currentOrderSong;
     const displayTitle = isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title;

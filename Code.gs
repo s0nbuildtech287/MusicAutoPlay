@@ -51,6 +51,20 @@ function ensureUser_(userId, displayName) {
   return id;
 }
 
+function youtubeTitle_(url, fallback) {
+  try {
+    const endpoint = "https://www.youtube.com/oembed?url=" + encodeURIComponent(String(url || "")) + "&format=json";
+    const response = UrlFetchApp.fetch(endpoint, { muteHttpExceptions: true, followRedirects: true });
+    if (response.getResponseCode() >= 200 && response.getResponseCode() < 300) {
+      const data = JSON.parse(response.getContentText());
+      if (data.title) return String(data.title).trim();
+    }
+  } catch (error) {
+    console.warn("Could not resolve YouTube title: " + error.message);
+  }
+  return String(fallback || "YouTube").trim();
+}
+
 // Run once manually in Apps Script before deploying.
 function initSetupSheet() {
   Object.keys(SHEETS).forEach((key) => sheet_(key));
@@ -89,7 +103,8 @@ function doPost(e) {
       return json_({ ok: true, playlist });
     }
     if (body.action === "addSong") {
-      const song = { id: Utilities.getUuid(), userId, playlistId: body.playlistId || "", title: body.title || body.vid, artist: body.artist || "YouTube", url: body.url, vid: body.vid, createdAt: now };
+      const title = String(body.title || "").trim() || youtubeTitle_(body.url, body.vid);
+      const song = { id: Utilities.getUuid(), userId, playlistId: body.playlistId || "", title, artist: body.artist || "YouTube", url: body.url, vid: body.vid, createdAt: now };
       append_("songs", song);
       return json_({ ok: true, song });
     }
