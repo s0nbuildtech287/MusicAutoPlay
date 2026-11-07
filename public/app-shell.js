@@ -39,18 +39,26 @@
     if (route === 'playlists') {
       const playlists = window.musicDb?.playlists || [];
       const renderPlaylistDetail = (playlist) => {
-        const songs = (window.getMusicLibrarySongs?.() || []).filter(song => String(song.playlistId || '') === String(playlist.id));
-        const rows = songs.map((song, index) => `<article class="saved-song-row playlist-song-row"><span class="saved-song-index">${index + 1}</span><div class="saved-song-info"><strong>${safe(song.title || song.vid)}</strong><small>${safe(song.artist || 'YouTube')}</small></div><button class="btn btn-primary playlist-play-btn" data-play-vid="${safe(song.vid)}">▶ Phát</button></article>`).join('');
-        routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><button class="btn btn-ghost playlist-back-btn" id="playlistBackBtn">← Tất cả playlist</button><span class="eyebrow">PLAYLIST</span><h2>${safe(playlist.name || 'Playlist')}</h2><p>${safe(playlist.topic || 'Chung')} · ${songs.length} bài</p></div><span class="route-workspace-badge">${songs.length} BÀI</span></div>${rows ? `<div class="saved-song-list">${rows}</div>` : '<div class="route-empty">Playlist này chưa có bài hát.</div>'}`;
+        const librarySongs = window.getMusicLibrarySongs?.() || [];
+        const songs = librarySongs.filter(song => String(song.playlistId || '') === String(playlist.id));
+        const visibleSongs = songs.length || !window.isMusicGuestMode?.() || String(playlist.id) !== 'guest-default' ? songs : librarySongs;
+        const rows = visibleSongs.map((song, index) => `<article class="saved-song-row playlist-song-row"><span class="saved-song-index">${index + 1}</span><div class="saved-song-info"><strong>${safe(song.title || song.vid)}</strong><small>${safe(song.artist || 'YouTube')}</small></div><button class="btn btn-primary playlist-play-btn" data-play-vid="${safe(song.vid)}">▶ Phát</button></article>`).join('');
+        routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><button class="btn btn-ghost playlist-back-btn" id="playlistBackBtn">← Tất cả playlist</button><span class="eyebrow">PLAYLIST</span><h2>${safe(playlist.name || 'Playlist')}</h2><p>${safe(playlist.topic || 'Chung')} · ${visibleSongs.length} bài</p></div><span class="route-workspace-badge">${visibleSongs.length} BÀI</span></div>${rows ? `<div class="saved-song-list">${rows}</div>` : '<div class="route-empty">Playlist này chưa có bài hát.</div>'}`;
         $('playlistBackBtn')?.addEventListener('click', () => renderRouteWorkspace('playlists'));
         routeWorkspace.querySelectorAll('[data-play-vid]').forEach(button => button.addEventListener('click', () => window.playMusicSongByVid?.(button.dataset.playVid)));
       };
-      const cards = playlists.map(playlist => `<article class="playlist-route-card" data-playlist-id="${safe(playlist.id)}"><div><div class="playlist-route-card-icon">📁</div><strong>${safe(playlist.name || 'Playlist')}</strong><small>${safe(playlist.topic || 'Chung')}</small></div><small>${playlist.songCount ? `${playlist.songCount} bài` : 'Playlist cá nhân'}</small></article>`).join('');
+      const cards = playlists.map(playlist => `<article class="playlist-route-card" data-playlist-id="${safe(playlist.id)}" role="button" tabindex="0"><div><div class="playlist-route-card-icon">📁</div><strong>${safe(playlist.name || 'Playlist')}</strong><small>${safe(playlist.topic || 'Chung')}</small></div><small>${playlist.songCount ? `${playlist.songCount} bài` : 'Playlist cá nhân'} · Mở playlist →</small></article>`).join('');
       routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR PLAYLISTS</span><h2>Playlist & chủ đề</h2><p>Chọn một playlist để quản lý các bài hát theo từng không gian nghe.</p></div><span class="route-workspace-badge">${playlists.length} PLAYLIST</span></div><div class="playlist-route-grid">${cards}<article class="playlist-route-card add-card" id="routeCreatePlaylist"><div class="playlist-route-card-icon">＋</div><strong>Tạo playlist mới</strong><small>Thêm playlist theo chủ đề</small></article></div>`;
-      routeWorkspace.querySelectorAll('[data-playlist-id]').forEach(card => card.addEventListener('click', () => {
-        const playlist = playlists.find(item => String(item.id) === String(card.dataset.playlistId));
-        if (playlist) renderPlaylistDetail(playlist);
-      }));
+      routeWorkspace.querySelectorAll('[data-playlist-id]').forEach(card => {
+        const openCard = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const playlist = playlists.find(item => String(item.id) === String(card.dataset.playlistId));
+          if (playlist) renderPlaylistDetail(playlist);
+        };
+        card.onclick = openCard;
+        card.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') openCard(event); };
+      });
       $('routeCreatePlaylist')?.addEventListener('click', async () => {
         if (window.requireMusicLogin?.()) return;
         const name = window.prompt('Tên playlist mới:');
@@ -128,7 +136,11 @@
     });
   });
   window.addEventListener('hashchange', () => setRoute(window.location.hash.replace(/^#\//, '') || 'home'));
-  window.addEventListener('music-library-updated', () => renderRouteWorkspace(window.location.hash.replace(/^#\//, '') || 'home'));
+  window.addEventListener('music-library-updated', () => {
+    const activeRoute = window.location.hash.replace(/^#\//, '') || 'home';
+    renderRouteWorkspace(activeRoute);
+    if (activeRoute === 'stats' && typeof window.renderStatsUI === 'function') window.renderStatsUI();
+  });
   setRoute(window.location.hash.replace(/^#\//, '') || 'home');
   $('statsBtn')?.addEventListener('click', () => {
     if (window.location.hash !== '#/history') {

@@ -1405,19 +1405,14 @@
     body[data-route="library"] .col-left { display:none; }
     body[data-route="library"] .main-layout { grid-template-columns:minmax(0,1fr); }
     body[data-route="library"] .col-right { max-height:none; position:static; overflow:visible; }
-    body[data-route="library"] .personal-player-bar { display:none; }
     body[data-route="playlists"] .main-layout { display:none; }
-    body[data-route="playlists"] .personal-player-bar { display:none; }
     body[data-route="favorites"] .main-layout, body[data-route="history"] .main-layout { display:none; }
-    body[data-route="favorites"] .personal-player-bar, body[data-route="history"] .personal-player-bar { display:none; }
     body[data-route="stats"] .main-layout,
-    body[data-route="stats"] .personal-player-bar,
     body[data-route="stats"] .home-add-track,
     body[data-route="stats"] .route-workspace { display:none !important; }
     body[data-route="settings"] .main-layout { display:grid; grid-template-columns:minmax(0,1fr); }
     body[data-route="settings"] .col-left,
     body[data-route="settings"] .col-right,
-    body[data-route="settings"] .personal-player-bar,
     body[data-route="settings"] .home-add-track,
     body[data-route="settings"] .route-workspace { display:none !important; }
     body[data-route="settings"] .col-top { display:block; grid-column:1 / -1; }
@@ -4470,6 +4465,7 @@ function renderStatsUI() {
     }).join('');
   }
 }
+window.renderStatsUI = renderStatsUI;
 
 function formatRelativeTime(timestamp) {
   const diff = Date.now() - timestamp;
