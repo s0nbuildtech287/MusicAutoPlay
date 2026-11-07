@@ -2077,10 +2077,34 @@ const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
 const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
 const MUSIC_USER_KEY = 'mymusic_user';
+const MUSIC_GUEST_MODE_KEY = 'mymusic_guest_mode';
 const musicDb = { playlists: [], favorites: [], history: [], libraryHidden: [] };
 window.musicDb = musicDb;
 
+const GUEST_SONGS = [
+  { userId: 'Guest', title: 'Buồn hay vui vsoul', artist: 'YouTube', url: 'https://youtu.be/JV0dEgbX5yk?si=WBdhdSUsw0C1B-Sl', vid: 'JV0dEgbX5yk' },
+  { userId: 'Guest', title: 'Địa đàng', artist: 'YouTube', url: 'https://youtu.be/vZzzcflS2HM?si=qqQl48l0_nMU3BEE', vid: 'vZzzcflS2HM' },
+  { userId: 'Guest', title: 'Tuyết yêu thương', artist: 'YouTube', url: 'https://youtu.be/ZGhTjouWqoQ?si=4WXXS3rMoE_DWmlx', vid: 'ZGhTjouWqoQ' },
+  { userId: 'Guest', title: 'Anh Đã Chờ Rất Lâu Remix - Sixkie Dawgz x SS Remix | Đứng Trước Bên Hiên Nhà Em Để Đợi Nói Câu Remix', artist: 'YouTube', url: 'https://youtu.be/8Mpe-H0v390?si=FU68iMYoGa3VHIKK', vid: '8Mpe-H0v390' },
+  { userId: 'Guest', title: 'Nắng dưới chân mây', artist: 'YouTube', url: 'https://youtu.be/VpspAxQF2X4?si=HKXZs8x0VwQKbhWa', vid: 'VpspAxQF2X4' },
+  { userId: 'Guest', title: 'Where have you gon', artist: 'YouTube', url: 'https://youtu.be/vxWsYaBVOTo?si=bifkrM6Fe7DveTMD', vid: 'vxWsYaBVOTo' },
+  { userId: 'Guest', title: "LOVIXX, STOSLIV - Don't tell your dreams", artist: 'YouTube', url: 'https://www.youtube.com/watch?v=HNtILS-XvNc&list=RDHNtILS-XvNc&start_radio=1', vid: 'HNtILS-XvNc' },
+  { userId: 'Guest', title: 'Bare minimum', artist: 'YouTube', url: 'https://youtu.be/bqPQCg36hmE?si=bkOJwAxSQ0Phg1Ga', vid: 'bqPQCg36hmE' },
+  { userId: 'Guest', title: 'Moonlight', artist: 'YouTube', url: 'https://youtu.be/1glFz07y27I?si=aLsazcWgx2tOGHJJ', vid: '1glFz07y27I' }
+];
+
+function isGuestMode() {
+  return localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1' || getMusicUser().userId === 'guest';
+}
+window.isMusicGuestMode = isGuestMode;
+window.requireMusicLogin = function requireMusicLogin() {
+  if (!isGuestMode()) return false;
+  toast('🔒 Vui lòng đăng nhập để sử dụng chức năng này');
+  return true;
+};
+
 function getMusicUser() {
+  if (localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') return { userId: 'guest', displayName: 'Guest' };
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
   try {
     const user = JSON.parse(raw);
@@ -2102,6 +2126,16 @@ function applySheetSongs(songs) {
 
 async function bootstrapMusicLibrary() {
   const user = getMusicUser();
+  if (isGuestMode()) {
+    musicDb.playlists = [{ id: 'guest-default', userId: 'guest', name: 'Guest Mix', topic: 'Trải nghiệm', createdAt: '' }];
+    musicDb.favorites = [];
+    musicDb.history = [];
+    musicDb.libraryHidden = [];
+    applySheetSongs(GUEST_SONGS);
+    syncMiniMusicActions();
+    window.dispatchEvent(new CustomEvent('music-library-updated'));
+    return;
+  }
   const callbackName = `myMusicSheetCallback_${Date.now()}`;
   const query = new URLSearchParams({ action: 'bootstrap', userId: user.userId, displayName: user.displayName, callback: callbackName, t: String(Date.now()) });
   const script = document.createElement('script');
@@ -2114,6 +2148,7 @@ async function bootstrapMusicLibrary() {
 }
 
 async function saveSongToSheet(song) {
+  if (isGuestMode()) return;
   const user = getMusicUser();
   const payload = JSON.stringify({ action: 'addSong', userId: user.userId, displayName: user.displayName, playlistId: '', title: song.title, artist: song.artist, url: song.url, vid: song.vid });
   await fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
@@ -2124,6 +2159,7 @@ function currentMusicSong() {
 }
 
 function postMusicAction(body) {
+  if (isGuestMode()) return Promise.resolve({ ok: true, guest: true });
   return fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, ...getMusicUser() }) });
 }
 window.postMusicAction = postMusicAction;
@@ -2136,6 +2172,7 @@ function syncMiniMusicActions() {
 }
 
 function openPlaylistPicker() {
+  if (window.requireMusicLogin?.()) return;
   const song = currentMusicSong(); const overlay = $('playlistPickerOverlay'); const list = $('playlistPickerList');
   if (!song || !overlay || !list) { toast('⚠️ Chưa có bài đang phát'); return; }
   list.innerHTML = musicDb.playlists.length ? musicDb.playlists.map(playlist => `<button class="playlist-picker-item" data-playlist-id="${playlist.id}"><span>📁 ${escapeHTML(playlist.name)}</span><small>${escapeHTML(playlist.topic || 'Chung')}</small></button>`).join('') : '<div class="empty-playlist">Chưa có playlist nào. Hãy tạo playlist mới.</div>';
@@ -2148,6 +2185,7 @@ function openPlaylistPicker() {
 
 function initMiniMusicActions() {
   $('miniFavorite')?.addEventListener('click', async () => {
+    if (window.requireMusicLogin?.()) return;
     const song = currentMusicSong(); if (!song) return toast('⚠️ Chưa có bài đang phát');
     const exists = musicDb.favorites.some(item => String(item.vid) === String(song.vid));
     await postMusicAction({ action: 'toggleFavorite', song });
@@ -2158,6 +2196,7 @@ function initMiniMusicActions() {
   $('closePlaylistPicker')?.addEventListener('click', () => { $('playlistPickerOverlay')?.classList.remove('active'); $('playlistPickerOverlay')?.classList.add('hidden'); });
   $('playlistPickerOverlay')?.addEventListener('click', event => { if (event.target.id === 'playlistPickerOverlay') { event.currentTarget.classList.remove('active'); event.currentTarget.classList.add('hidden'); } });
   $('createPlaylistBtn')?.addEventListener('click', async () => {
+    if (window.requireMusicLogin?.()) return;
     const name = $('newPlaylistName')?.value.trim(); const topic = $('newPlaylistTopic')?.value.trim() || 'Chung';
     if (!name) return $('newPlaylistName')?.focus();
     await postMusicAction({ action: 'createPlaylist', name, topic });
@@ -2169,6 +2208,7 @@ initMiniMusicActions();
 async function removeSongFromLibrary(song, event) {
   event?.stopPropagation();
   if (!song?.vid) return;
+  if (window.requireMusicLogin?.()) return;
   if (!confirm(`Xóa "${song.title || song.vid}" khỏi thư viện? Bài vẫn giữ trong Yêu thích và Playlist.`)) return;
   await postMusicAction({ action: 'removeFromLibrary', vid: song.vid });
   musicDb.libraryHidden = [...new Set([...musicDb.libraryHidden, String(song.vid)])];
@@ -2188,6 +2228,7 @@ async function removeSongFromLibrary(song, event) {
   if (!form || !urlInput) return;
   form.addEventListener('submit', async event => {
     event.preventDefault();
+    if (window.requireMusicLogin?.()) return;
     const url = urlInput.value.trim();
     const vid = extractVideoId(url);
     if (!vid) { toast('⚠️ Link YouTube không hợp lệ'); return; }

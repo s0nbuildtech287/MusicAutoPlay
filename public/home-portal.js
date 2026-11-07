@@ -11,6 +11,7 @@
 
   const AUTH_STORAGE_KEY = 'mymusic_auth';
   const USER_STORAGE_KEY = 'mymusic_user';
+  const GUEST_MODE_KEY = 'mymusic_guest_mode';
   const VALID_USER = 'xu4ns0n';
   const VALID_PASS = '123456';
 
@@ -270,6 +271,9 @@
 
     function enterDemoMode(e) {
       if (e) e.preventDefault();
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.setItem(GUEST_MODE_KEY, '1');
       unlockPlayerAndDismiss('Guest');
     }
 
@@ -299,6 +303,7 @@
 
     function performLogin(username, password) {
       const u = username || VALID_USER;
+      localStorage.removeItem(GUEST_MODE_KEY);
       localStorage.setItem(AUTH_STORAGE_KEY, '1');
       localStorage.setItem(USER_STORAGE_KEY, u);
       unlockPlayerAndDismiss(u);
@@ -372,6 +377,7 @@
   function doLogout() {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(GUEST_MODE_KEY);
 
     const badge = document.getElementById('headerUserProfile');
     if (badge) badge.remove();
@@ -394,8 +400,9 @@
     setupPortalEvents();
 
     const forceIntro = new URLSearchParams(window.location.search).get('intro') === '1';
-    const isAuthed = !forceIntro && localStorage.getItem(AUTH_STORAGE_KEY) === '1';
-    const savedUser = localStorage.getItem(USER_STORAGE_KEY) || VALID_USER;
+    const isGuest = localStorage.getItem(GUEST_MODE_KEY) === '1';
+    const isAuthed = !forceIntro && (localStorage.getItem(AUTH_STORAGE_KEY) === '1' || isGuest);
+    const savedUser = isGuest ? 'Guest' : (localStorage.getItem(USER_STORAGE_KEY) || VALID_USER);
     const overlay = document.getElementById('myMusicHomePortal');
 
     if (isAuthed) {

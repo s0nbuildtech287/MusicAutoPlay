@@ -41,6 +41,7 @@
       const cards = playlists.map(playlist => `<article class="playlist-route-card"><div><div class="playlist-route-card-icon">📁</div><strong>${playlist.name || 'Playlist'}</strong><small>${playlist.topic || 'Chung'}</small></div><small>Playlist cá nhân</small></article>`).join('');
       routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR PLAYLISTS</span><h2>Playlist & chủ đề</h2><p>Chọn một playlist để quản lý các bài hát theo từng không gian nghe.</p></div><span class="route-workspace-badge">${playlists.length} PLAYLIST</span></div><div class="playlist-route-grid">${cards}<article class="playlist-route-card add-card" id="routeCreatePlaylist"><div class="playlist-route-card-icon">＋</div><strong>Tạo playlist mới</strong><small>Thêm playlist theo chủ đề</small></article></div>`;
       $('routeCreatePlaylist')?.addEventListener('click', async () => {
+        if (window.requireMusicLogin?.()) return;
         const name = window.prompt('Tên playlist mới:');
         if (!name?.trim()) return;
         const topic = window.prompt('Chủ đề playlist:', 'Chung') || 'Chung';
