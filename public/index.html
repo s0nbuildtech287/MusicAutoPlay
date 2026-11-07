@@ -1392,6 +1392,11 @@
     .route-tile-icon { font-size:1.35rem; }
     .route-tile strong { display:block; margin-top:10px; font-size:0.85rem; }
     .route-tile small { display:block; margin-top:5px; color:var(--text-muted); font-size:0.72rem; line-height:1.4; }
+    .stats-route-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .stats-route-card { min-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:20px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:linear-gradient(145deg,rgba(124,106,247,.17),rgba(18,15,30,.72)); text-align:center; }
+    .stats-route-icon { font-size:1.7rem; }
+    .stats-route-card strong { font-size:2rem; color:var(--accent2); }
+    .stats-route-card small { color:var(--text-muted); font-size:.75rem; }
     .library-remove-btn { flex:0 0 auto; width:30px; height:30px; border:1px solid rgba(248,113,113,.28); border-radius:8px; color:#f87171; background:rgba(248,113,113,.08); cursor:pointer; }
     .library-remove-btn:hover { color:#fff; background:#dc2626; border-color:#ef4444; }
     .home-add-track { width:calc(100% - 48px); margin:16px auto 22px; padding:14px 18px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(18,15,30,0.78); box-shadow:0 8px 30px rgba(0,0,0,0.22); backdrop-filter:blur(16px); }
@@ -1408,8 +1413,8 @@
     body[data-route="playlists"] .main-layout { display:none; }
     body[data-route="favorites"] .main-layout, body[data-route="history"] .main-layout { display:none; }
     body[data-route="stats"] .main-layout,
-    body[data-route="stats"] .home-add-track,
-    body[data-route="stats"] .route-workspace { display:none !important; }
+    body[data-route="stats"] .home-add-track { display:none !important; }
+    body[data-route="stats"] .route-workspace { display:block !important; }
     body[data-route="settings"] .main-layout { display:grid; grid-template-columns:minmax(0,1fr); }
     body[data-route="settings"] .col-left,
     body[data-route="settings"] .col-right,
@@ -1440,6 +1445,7 @@
     @media (max-width:760px) { body[data-route="playlists"] .route-workspace { width:calc(100% - 24px); } }
     @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); margin:12px auto 16px; } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
     @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); margin:12px auto 16px; padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
+    @media (max-width:760px) { .stats-route-grid { grid-template-columns:1fr; } }
     body.stats-view #statsOverlay .history-section { display:none; }
     body.stats-view #statsOverlay.active { position:relative; inset:auto; display:block; width:100%; min-height:0; padding:0 16px 50px; background:transparent; pointer-events:auto; }
     body.stats-view #statsOverlay.active .stats-modal { max-width:900px; margin:20px auto 0; box-shadow:0 18px 50px rgba(0,0,0,.25); }

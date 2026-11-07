@@ -29,10 +29,19 @@
     const formatDate = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Chưa rõ thời gian' : date.toLocaleString('vi-VN'); };
     const count = $('playlistCount')?.textContent?.trim() || '0 bài';
     const views = {
+      history: { eyebrow: 'YOUR HISTORY', title: 'Lịch sử nghe', badge: 'HISTORY', description: 'Các bài hát đã nghe theo mốc thời gian.', tiles: [] },
       library: { eyebrow: 'YOUR LIBRARY', title: 'Thư viện nhạc', badge: 'LIBRARY', description: 'Tập trung toàn bộ bài hát đang có trong Sheet và trạng thái phát hiện tại.', tiles: [['🎵', 'Toàn bộ bài hát', count], ['🔎', 'Tìm kiếm nhanh', 'Tìm theo tên bài hoặc ca sĩ ở khung Queue'], ['▶️', 'Phát ngay', 'Chọn một bài trong danh sách để bắt đầu nghe']] },
       playlists: { eyebrow: 'YOUR PLAYLISTS', title: 'Playlist & chủ đề', badge: 'PLAYLISTS', description: 'Khu vực dành cho các danh sách nhạc riêng theo chủ đề của bạn.', tiles: [['📁', 'Playlist hiện tại', count], ['🗂️', 'Theo chủ đề', 'Các bài hát được nhóm theo playlist trong dữ liệu'], ['➕', 'Thêm playlist', 'Tạo playlist mới sẽ được kết nối với dữ liệu tài khoản']] },
       favorites: { eyebrow: 'YOUR FAVORITES', title: 'Bài hát yêu thích', badge: 'FAVORITES', description: 'Những bài bạn đánh dấu yêu thích sẽ được gom riêng tại đây.', tiles: [['💜', 'Đã yêu thích', 'Đồng bộ theo tài khoản hiện tại'], ['📌', 'Lưu để nghe lại', 'Bấm biểu tượng yêu thích trên bài hát để lưu'], ['🔁', 'Nghe lại', 'Các bài đã lưu luôn sẵn sàng trong playlist']] }
     };
+    if (route === 'stats') {
+      const libraryCount = (window.getMusicLibrarySongs?.() || []).length;
+      const favoriteCount = (window.musicDb?.favorites || []).length;
+      const playlistCount = (window.musicDb?.playlists || []).length;
+      routeWorkspace.hidden = false;
+      routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR STATISTICS</span><h2>Thống kê thư viện</h2><p>Tổng quan dữ liệu nhạc hiện có trong tài khoản.</p></div><span class="route-workspace-badge">OVERVIEW</span></div><div class="stats-route-grid"><article class="stats-route-card"><span class="stats-route-icon">🎵</span><strong>${libraryCount}</strong><small>Bài trong thư viện</small></article><article class="stats-route-card"><span class="stats-route-icon">💜</span><strong>${favoriteCount}</strong><small>Bài yêu thích</small></article><article class="stats-route-card"><span class="stats-route-icon">📁</span><strong>${playlistCount}</strong><small>Tổng số playlist</small></article></div>`;
+      return;
+    }
     const view = views[route];
     if (!view) { routeWorkspace.hidden = true; routeWorkspace.innerHTML = ''; return; }
     routeWorkspace.hidden = false;
@@ -117,7 +126,8 @@
     if (cleanRoute === 'settings') {
       $('settingsCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (cleanRoute === 'stats') {
-      $('statsBtn')?.click();
+      if (typeof window.renderStatsUI === 'function') window.renderStatsUI();
+      $('statsOverlay')?.classList.remove('active');
       setTimeout(() => { const title = document.querySelector('#statsOverlay .stats-header h2'); if (title) title.textContent = '📊 Thống kê nghe nhạc'; }, 0);
     } else if (cleanRoute === 'history') {
       $('statsBtn')?.click();
