@@ -199,6 +199,25 @@
     `;
 
     document.body.appendChild(overlay);
+
+    const navActions = overlay.querySelector('.portal-nav-actions');
+    const registerNav = document.createElement('button');
+    registerNav.type = 'button';
+    registerNav.id = 'portalNavRegisterBtn';
+    registerNav.className = 'portal-btn-sm';
+    registerNav.textContent = 'Đăng ký';
+    navActions?.appendChild(registerNav);
+
+    const heroActions = overlay.querySelector('.portal-cta-group');
+    const registerHero = document.createElement('button');
+    registerHero.type = 'button';
+    registerHero.id = 'heroRegisterBtn';
+    registerHero.className = 'portal-btn-main primary';
+    registerHero.textContent = 'Đăng ký tài khoản';
+    heroActions?.insertBefore(registerHero, heroActions.firstChild);
+
+    const loginModal = overlay.querySelector('#portalLoginModal');
+    loginModal?.insertAdjacentHTML('beforeend', `<form id="portalRegisterForm" autocomplete="on" style="display:none;"><div class="portal-form-field"><label for="portalRegisterUsername">Tên đăng nhập</label><div class="portal-input-wrapper"><span class="portal-input-icon">👤</span><input type="text" id="portalRegisterUsername" class="portal-input-control" placeholder="Tạo username" required autocomplete="username"></div></div><div class="portal-form-field"><label for="portalRegisterPassword">Mật khẩu</label><div class="portal-input-wrapper"><span class="portal-input-icon">🔒</span><input type="password" id="portalRegisterPassword" class="portal-input-control" placeholder="Tối thiểu 4 ký tự" required></div></div><div class="portal-form-field"><label for="portalRegisterConfirm">Xác nhận mật khẩu</label><div class="portal-input-wrapper"><span class="portal-input-icon">✓</span><input type="password" id="portalRegisterConfirm" class="portal-input-control" placeholder="Nhập lại mật khẩu" required></div></div><button type="submit" class="portal-submit-btn">Đăng ký →</button><button type="button" class="portal-fast-btn" id="portalBackToLoginBtn">Đã có tài khoản? Đăng nhập</button></form>`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -211,6 +230,7 @@
     const userField = document.getElementById('portalUsernameInput');
     const passField = document.getElementById('portalPasswordInput');
     const form = document.getElementById('portalLoginForm');
+    const registerForm = document.getElementById('portalRegisterForm');
     const togglePass = document.getElementById('portalTogglePassBtn');
     const fillPreset = document.getElementById('fillPresetBtn');
 
@@ -223,10 +243,20 @@
     function showLogin() {
       if (heroView) heroView.style.display = 'none';
       if (loginModal) loginModal.style.display = 'block';
+      if (form) form.style.display = 'block';
+      if (registerForm) registerForm.style.display = 'none';
       if (userField) {
         userField.focus();
         userField.select();
       }
+    }
+
+    function showRegister() {
+      if (heroView) heroView.style.display = 'none';
+      if (loginModal) loginModal.style.display = 'block';
+      if (form) form.style.display = 'none';
+      if (registerForm) registerForm.style.display = 'block';
+      document.getElementById('portalRegisterUsername')?.focus();
     }
 
     function showAlert(msg, isError = true) {
@@ -259,11 +289,36 @@
     // Nav & Hero buttons
     const navLoginBtn = document.getElementById('portalNavLoginBtn');
     const heroOpenLoginBtn = document.getElementById('heroOpenLoginBtn');
+    const navRegisterBtn = document.getElementById('portalNavRegisterBtn');
+    const heroRegisterBtn = document.getElementById('heroRegisterBtn');
     const loginBackBtn = document.getElementById('portalLoginBackBtn');
 
     if (navLoginBtn) navLoginBtn.onclick = showLogin;
     if (heroOpenLoginBtn) heroOpenLoginBtn.onclick = showLogin;
+    if (navRegisterBtn) navRegisterBtn.onclick = showRegister;
+    if (heroRegisterBtn) heroRegisterBtn.onclick = showRegister;
     if (loginBackBtn) loginBackBtn.onclick = showHero;
+
+    registerForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const username = document.getElementById('portalRegisterUsername')?.value.trim() || '';
+      const password = document.getElementById('portalRegisterPassword')?.value || '';
+      const confirmPassword = document.getElementById('portalRegisterConfirm')?.value || '';
+      if (username.length < 3) return showAlert('Tên đăng nhập cần ít nhất 3 ký tự!');
+      if (password.length < 4) return showAlert('Mật khẩu cần ít nhất 4 ký tự!');
+      if (password !== confirmPassword) return showAlert('Mật khẩu xác nhận không khớp!');
+      const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
+      if (accounts[username]) return showAlert('Tên đăng nhập đã tồn tại!');
+      fetch(window.MUSIC_SHEET_API || 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec', {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'register', userId: username, displayName: username, password })
+      }).catch(error => console.warn('Không thể đồng bộ tài khoản lên Sheet:', error));
+      accounts[username] = { password, createdAt: new Date().toISOString() };
+      localStorage.setItem('mymusic_accounts', JSON.stringify(accounts));
+      showAlert('Đăng ký thành công, đang đăng nhập...', false);
+      performLogin(username, password);
+    });
+    document.getElementById('portalBackToLoginBtn')?.addEventListener('click', showLogin);
 
     function doFastLogin(e) {
       if (e) e.preventDefault();

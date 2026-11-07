@@ -117,6 +117,10 @@
   transform: translateY(-1px);
 }
 
+#portalNavFastBtn,
+#heroFastLoginBtn,
+#modalFastLoginBtn { display: none !important; }
+
 /* ─── Hero Main Layout ─── */
 .portal-container {
   position: relative;

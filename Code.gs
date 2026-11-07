@@ -1,6 +1,6 @@
 /** MyMusic temporary Google Sheets database. */
 const SHEETS = {
-  users: ["Users", ["userId", "displayName", "createdAt", "lastSeenAt"]],
+  users: ["Users", ["userId", "displayName", "password", "createdAt", "lastSeenAt"]],
   playlists: ["Playlists", ["id", "userId", "name", "topic", "createdAt"]],
   songs: ["Songs", ["id", "userId", "playlistId", "title", "artist", "url", "vid", "createdAt"]],
   libraryHidden: ["LibraryHidden", ["userId", "vid", "hiddenAt"]],
@@ -26,6 +26,10 @@ function sheet_(key) {
   let sheet = book.getSheetByName(name);
   if (!sheet) sheet = book.insertSheet(name);
   if (sheet.getLastRow() === 0) sheet.appendRow(headers);
+  const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
+  headers.forEach((header) => {
+    if (!currentHeaders.includes(header)) sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+  });
   return sheet;
 }
 
@@ -40,8 +44,9 @@ function rows_(key) {
 }
 
 function append_(key, item) {
-  const headers = SHEETS[key][1];
-  sheet_(key).appendRow(headers.map((header) => item[header] ?? ""));
+  const sheet = sheet_(key);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  sheet.appendRow(headers.map((header) => item[header] ?? ""));
 }
 
 function ensureUser_(userId, displayName) {
@@ -93,8 +98,34 @@ function repairSongTitles_() {
   return repaired;
 }
 
+function repairUserColumns_() {
+  const sheet = sheet_("users");
+  const values = sheet.getDataRange().getValues();
+  const headers = values.shift() || [];
+  const userCol = headers.indexOf("userId");
+  const createdCol = headers.indexOf("createdAt");
+  const lastSeenCol = headers.indexOf("lastSeenAt");
+  const passwordCol = headers.indexOf("password");
+  const isIsoDate = value => /^\d{4}-\d{2}-\d{2}T/.test(String(value || ""));
+  let repaired = 0;
+  values.forEach((row, index) => {
+    const created = row[createdCol];
+    const lastSeen = row[lastSeenCol];
+    const password = row[passwordCol];
+    if (!String(row[userCol] || "") || isIsoDate(created) || !isIsoDate(lastSeen) || !isIsoDate(password)) return;
+    sheet.getRange(index + 2, createdCol + 1).setValue(lastSeen);
+    sheet.getRange(index + 2, lastSeenCol + 1).setValue(password);
+    sheet.getRange(index + 2, passwordCol + 1).setValue(created);
+    repaired += 1;
+  });
+  return repaired;
+}
+
 function doGet(e) {
   const p = e.parameter || {};
+  if (p.action === "repairUsers") {
+    return response_({ ok: true, repaired: repairUserColumns_() }, e);
+  }
   if (p.action === "repairTitles") {
     return response_({ ok: true, repaired: repairSongTitles_() }, e);
   }
@@ -122,6 +153,16 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || "{}");
+    if (body.action === "register") {
+      const username = String(body.userId || body.username || "").trim();
+      const password = String(body.password || "");
+      if (username.length < 3 || password.length < 4) return json_({ ok: false, error: "Invalid registration data" });
+      const exists = rows_("users").some((row) => String(row.userId) === username);
+      if (exists) return json_({ ok: false, error: "Username already exists" });
+      const now = new Date().toISOString();
+      append_("users", { userId: username, displayName: body.displayName || username, password, createdAt: now, lastSeenAt: now });
+      return json_({ ok: true, user: { userId: username, displayName: body.displayName || username } });
+    }
     const userId = ensureUser_(body.userId || "guest", body.displayName || "");
     const now = new Date().toISOString();
     if (body.action === "createPlaylist") {
