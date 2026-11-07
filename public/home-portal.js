@@ -126,6 +126,13 @@
         </section>
       </main>
 
+      <div class="portal-bottom-wave" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
       <!-- VIEW 2: GLASSMORPHISM LOGIN CARD -->
       <section class="portal-login-modal" id="portalLoginModal" style="display:none;">
         <button type="button" class="portal-back-btn" id="portalLoginBackBtn">

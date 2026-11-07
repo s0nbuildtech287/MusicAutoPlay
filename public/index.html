@@ -1410,6 +1410,17 @@
     body[data-route="playlists"] .personal-player-bar { display:none; }
     body[data-route="favorites"] .main-layout, body[data-route="history"] .main-layout { display:none; }
     body[data-route="favorites"] .personal-player-bar, body[data-route="history"] .personal-player-bar { display:none; }
+    body[data-route="stats"] .main-layout,
+    body[data-route="stats"] .personal-player-bar,
+    body[data-route="stats"] .home-add-track,
+    body[data-route="stats"] .route-workspace { display:none !important; }
+    body[data-route="settings"] .main-layout { display:grid; grid-template-columns:minmax(0,1fr); }
+    body[data-route="settings"] .col-left,
+    body[data-route="settings"] .col-right,
+    body[data-route="settings"] .personal-player-bar,
+    body[data-route="settings"] .home-add-track,
+    body[data-route="settings"] .route-workspace { display:none !important; }
+    body[data-route="settings"] .col-top { display:block; grid-column:1 / -1; }
     body[data-route="history"] #statsOverlay { display:none !important; }
     body[data-route="favorites"] .route-workspace, body[data-route="history"] .route-workspace { width:calc(100% - 48px); max-width:1000px; margin:20px auto 110px; }
     .saved-song-list, .history-route-list { display:grid; gap:8px; }
@@ -1435,12 +1446,18 @@
     @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); margin:12px auto 16px; } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
     @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); margin:12px auto 16px; padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
     body.stats-view #statsOverlay .history-section { display:none; }
+    body.stats-view #statsOverlay.active { position:relative; inset:auto; display:block; width:100%; min-height:0; padding:0 16px 50px; background:transparent; pointer-events:auto; }
+    body.stats-view #statsOverlay.active .stats-modal { max-width:900px; margin:20px auto 0; box-shadow:0 18px 50px rgba(0,0,0,.25); }
+    body.stats-view #statsOverlay .close-modal-btn { display:none; }
     body.history-view #statsOverlay .stats-grid,
     body.history-view #statsOverlay .leaderboard-section,
     body.history-view #statsOverlay .stats-footer { display:none; }
     body.history-view #statsOverlay.active { position:relative; inset:auto; display:block; width:100%; min-height:0; padding:0 16px 110px; background:transparent; pointer-events:auto; }
     body.history-view #statsOverlay.active .stats-modal { max-width:900px; margin:20px auto 0; box-shadow:0 18px 50px rgba(0,0,0,.25); }
     body.history-view #statsOverlay .close-modal-btn { display:none; }
+    #statsOverlay .leaderboard-section,
+    #statsOverlay .history-section,
+    #statsOverlay .stats-footer { display:none; }
     .col-right { min-width:0; max-height:calc(100vh - 126px); overflow:auto; position:sticky; top:16px; }
     body.right-panel-hidden .col-right { display:none; }
     body.right-panel-hidden .main-layout { grid-template-columns:minmax(0,1fr); }
@@ -2116,20 +2133,49 @@ function getMusicUser() {
 
 function applySheetSongs(songs) {
   state.songs = (songs || []).filter(song => song && song.url && song.vid).map((song, index) => ({
-    stt: index + 1, name: song.userId || getMusicUser().displayName, title: song.title || song.vid, artist: song.artist || 'YouTube', url: song.url, vid: song.vid
+    stt: index + 1, name: song.userId || getMusicUser().displayName, title: song.title || song.vid, artist: song.artist || 'YouTube', url: song.url, vid: song.vid,
+    playlistId: song.playlistId || (isGuestMode() ? 'guest-default' : '')
   }));
   state.members = [...new Set(state.songs.map(song => song.name))];
   state.activeMembers = new Set(state.members);
   renderFilterChips();
   buildPlaylist();
 }
+window.getMusicLibrarySongs = () => state.songs;
+window.playMusicSongByVid = (vid) => {
+  const index = state.playlist.findIndex(song => String(song.vid) === String(vid));
+  if (index >= 0) playSong(index);
+  else {
+    const songIndex = state.songs.findIndex(song => String(song.vid) === String(vid));
+    if (songIndex >= 0) {
+      state.activeMembers = new Set([state.songs[songIndex].name]);
+      buildPlaylist();
+      const rebuiltIndex = state.playlist.findIndex(song => String(song.vid) === String(vid));
+      if (rebuiltIndex >= 0) playSong(rebuiltIndex);
+    }
+  }
+};
 
 async function bootstrapMusicLibrary() {
   const user = getMusicUser();
   if (isGuestMode()) {
-    musicDb.playlists = [{ id: 'guest-default', userId: 'guest', name: 'Guest Mix', topic: 'Trải nghiệm', createdAt: '' }];
-    musicDb.favorites = [];
-    musicDb.history = [];
+    const guestPlaylist = { id: 'guest-default', userId: 'guest', name: 'Guest Mix', topic: 'Trải nghiệm 9 bài', songCount: GUEST_SONGS.length, createdAt: '' };
+    musicDb.playlists = [guestPlaylist];
+    musicDb.favorites = GUEST_SONGS.slice(0, 3).map(song => ({
+      userId: 'guest',
+      vid: song.vid,
+      songJson: JSON.stringify({ ...song, playlistId: guestPlaylist.id }),
+      createdAt: ''
+    }));
+    musicDb.history = GUEST_SONGS.map((song, index) => ({
+      userId: 'guest',
+      vid: song.vid,
+      title: song.title,
+      artist: song.artist,
+      playlistId: guestPlaylist.id,
+      isOrder: false,
+      playedAt: new Date(Date.now() - (GUEST_SONGS.length - index) * 3600000).toISOString()
+    }));
     musicDb.libraryHidden = [];
     applySheetSongs(GUEST_SONGS);
     syncMiniMusicActions();
@@ -4347,18 +4393,13 @@ function recordPlayHistory(song, isOrder) {
 }
 
 function calculateStats() {
-  let history = [];
-  try {
-    const raw = localStorage.getItem('mcp_history');
-    if (raw) history = JSON.parse(raw);
-  } catch (err) {}
-  
-  const total = history.length;
-  const defaults = history.filter(h => !h.isOrder).length;
-  const orders = history.filter(h => h.isOrder).length;
+  const total = Array.isArray(state.songs) ? state.songs.length : 0;
+  const defaults = Array.isArray(window.musicDb?.favorites) ? window.musicDb.favorites.length : 0;
+  const orders = Array.isArray(window.musicDb?.playlists) ? window.musicDb.playlists.length : 0;
   
   // Calculate leaderboard
   const counts = {};
+  const history = Array.isArray(window.musicDb?.history) ? window.musicDb.history : [];
   history.forEach(h => {
     const name = h.name ? h.name.trim() : '';
     if (name) {
@@ -4379,10 +4420,16 @@ function calculateStats() {
 
 function renderStatsUI() {
   const { total, defaults, orders, leaderboard, recent } = calculateStats();
+  const statsTitle = document.querySelector('#statsOverlay .stats-header h2');
+  if (statsTitle) statsTitle.textContent = '📊 Thống kê thư viện';
   
   $('statTotal').textContent = total;
   $('statDefault').textContent = defaults;
   $('statOrder').textContent = orders;
+  const labels = document.querySelectorAll('#statsOverlay .stats-card-label');
+  if (labels[0]) labels[0].textContent = '🎵 Bài trong thư viện';
+  if (labels[1]) labels[1].textContent = '💜 Bài yêu thích';
+  if (labels[2]) labels[2].textContent = '📁 Tổng số playlist';
   
   // Render Leaderboard
   const leaderboardEl = $('statsLeaderboard');
