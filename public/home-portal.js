@@ -126,6 +126,10 @@
         </section>
       </main>
 
+      <div class="portal-floating-notes" aria-hidden="true">
+        <span>♪</span><span>♫</span><span>♬</span><span>♪</span><span>♫</span><span>♩</span><span>♬</span><span>♪</span>
+      </div>
+
       <div class="portal-bottom-wave" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
