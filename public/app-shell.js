@@ -25,6 +25,8 @@
 
   function renderRouteWorkspace(route) {
     if (!routeWorkspace) return;
+    const safe = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+    const formatDate = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Chưa rõ thời gian' : date.toLocaleString('vi-VN'); };
     const count = $('playlistCount')?.textContent?.trim() || '0 bài';
     const views = {
       library: { eyebrow: 'YOUR LIBRARY', title: 'Thư viện nhạc', badge: 'LIBRARY', description: 'Tập trung toàn bộ bài hát đang có trong Sheet và trạng thái phát hiện tại.', tiles: [['🎵', 'Toàn bộ bài hát', count], ['🔎', 'Tìm kiếm nhanh', 'Tìm theo tên bài hoặc ca sĩ ở khung Queue'], ['▶️', 'Phát ngay', 'Chọn một bài trong danh sách để bắt đầu nghe']] },
@@ -34,6 +36,39 @@
     const view = views[route];
     if (!view) { routeWorkspace.hidden = true; routeWorkspace.innerHTML = ''; return; }
     routeWorkspace.hidden = false;
+    if (route === 'playlists') {
+      const playlists = window.musicDb?.playlists || [];
+      const cards = playlists.map(playlist => `<article class="playlist-route-card"><div><div class="playlist-route-card-icon">📁</div><strong>${playlist.name || 'Playlist'}</strong><small>${playlist.topic || 'Chung'}</small></div><small>Playlist cá nhân</small></article>`).join('');
+      routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR PLAYLISTS</span><h2>Playlist & chủ đề</h2><p>Chọn một playlist để quản lý các bài hát theo từng không gian nghe.</p></div><span class="route-workspace-badge">${playlists.length} PLAYLIST</span></div><div class="playlist-route-grid">${cards}<article class="playlist-route-card add-card" id="routeCreatePlaylist"><div class="playlist-route-card-icon">＋</div><strong>Tạo playlist mới</strong><small>Thêm playlist theo chủ đề</small></article></div>`;
+      $('routeCreatePlaylist')?.addEventListener('click', async () => {
+        const name = window.prompt('Tên playlist mới:');
+        if (!name?.trim()) return;
+        const topic = window.prompt('Chủ đề playlist:', 'Chung') || 'Chung';
+        if (typeof window.postMusicAction === 'function') await window.postMusicAction({ action: 'createPlaylist', name: name.trim(), topic: topic.trim() || 'Chung' });
+        if (window.musicDb) window.musicDb.playlists.push({ id: `local-${Date.now()}`, name: name.trim(), topic: topic.trim() || 'Chung' });
+        renderRouteWorkspace('playlists');
+      });
+      return;
+    }
+    if (route === 'favorites') {
+      const favorites = window.musicDb?.favorites || [];
+      let localHistory = [];
+      try { localHistory = JSON.parse(localStorage.getItem('mcp_history') || '[]'); } catch (_) {}
+      const history = [...(window.musicDb?.history || []), ...localHistory];
+      const listens = history.reduce((map, item) => { map[item.vid] = (map[item.vid] || 0) + 1; return map; }, {});
+      const songs = favorites.map(item => { try { return JSON.parse(item.songJson || '{}'); } catch (_) { return item; } });
+      const rows = songs.map((song, index) => `<article class="saved-song-row"><span class="saved-song-index">${index + 1}</span><div class="saved-song-info"><strong>${safe(song.title || song.vid)}</strong><small>${safe(song.artist || 'YouTube')}</small></div><span class="saved-song-count">${listens[song.vid] || 0} lần nghe</span></article>`).join('');
+      routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR FAVORITES</span><h2>Bài hát yêu thích</h2><p>Các bài đã lưu và số lần bạn đã nghe lại.</p></div><span class="route-workspace-badge">${songs.length} BÀI</span></div>${rows ? `<div class="saved-song-list">${rows}</div>` : '<div class="route-empty">Chưa có bài hát yêu thích.</div>'}`;
+      return;
+    }
+    if (route === 'history') {
+      let localHistory = [];
+      try { localHistory = JSON.parse(localStorage.getItem('mcp_history') || '[]'); } catch (_) {}
+      const history = [...(window.musicDb?.history || []), ...localHistory].reverse();
+      const rows = history.map((item, index) => `<article class="history-route-row"><span class="history-route-index">${index + 1}</span><div class="history-route-info"><strong>${safe(item.title || item.vid)}</strong><small>${safe(item.artist || 'YouTube')}</small></div><time class="history-route-time">${formatDate(item.playedAt || item.timestamp)}</time></article>`).join('');
+      routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR HISTORY</span><h2>Lịch sử nghe</h2><p>Các bài hát đã nghe theo mốc thời gian.</p></div><span class="route-workspace-badge">${history.length} LƯỢT</span></div>${rows ? `<div class="history-route-list">${rows}</div>` : '<div class="route-empty">Chưa có lịch sử nghe nhạc.</div>'}`;
+      return;
+    }
     routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">${view.eyebrow}</span><h2>${view.title}</h2><p>${view.description}</p></div><span class="route-workspace-badge">${view.badge}</span></div><div class="route-workspace-grid">${view.tiles.map(([icon, title, text]) => `<article class="route-tile"><div class="route-tile-icon">${icon}</div><strong>${title}</strong><small>${text}</small></article>`).join('')}</div>`;
   }
 
@@ -81,6 +116,7 @@
     });
   });
   window.addEventListener('hashchange', () => setRoute(window.location.hash.replace(/^#\//, '') || 'home'));
+  window.addEventListener('music-library-updated', () => renderRouteWorkspace(window.location.hash.replace(/^#\//, '') || 'home'));
   setRoute(window.location.hash.replace(/^#\//, '') || 'home');
   $('statsBtn')?.addEventListener('click', () => {
     if (window.location.hash !== '#/history') {

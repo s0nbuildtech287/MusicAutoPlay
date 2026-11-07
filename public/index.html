@@ -1406,6 +1406,32 @@
     body[data-route="library"] .main-layout { grid-template-columns:minmax(0,1fr); }
     body[data-route="library"] .col-right { max-height:none; position:static; overflow:visible; }
     body[data-route="library"] .personal-player-bar { display:none; }
+    body[data-route="playlists"] .main-layout { display:none; }
+    body[data-route="playlists"] .personal-player-bar { display:none; }
+    body[data-route="favorites"] .main-layout, body[data-route="history"] .main-layout { display:none; }
+    body[data-route="favorites"] .personal-player-bar, body[data-route="history"] .personal-player-bar { display:none; }
+    body[data-route="history"] #statsOverlay { display:none !important; }
+    body[data-route="favorites"] .route-workspace, body[data-route="history"] .route-workspace { width:calc(100% - 48px); max-width:1000px; margin:20px auto 110px; }
+    .saved-song-list, .history-route-list { display:grid; gap:8px; }
+    .saved-song-row, .history-route-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(18,15,30,.7); }
+    .saved-song-row:hover, .history-route-row:hover { border-color:var(--accent2); }
+    .saved-song-index, .history-route-index { width:28px; color:var(--accent2); font-weight:700; text-align:center; }
+    .saved-song-info, .history-route-info { min-width:0; flex:1; }
+    .saved-song-info strong, .history-route-info strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.84rem; }
+    .saved-song-info small, .history-route-info small { display:block; margin-top:4px; color:var(--text-muted); font-size:.72rem; }
+    .saved-song-count, .history-route-time { color:var(--accent2); font-size:.72rem; white-space:nowrap; }
+    @media (max-width:760px) { body[data-route="favorites"] .route-workspace, body[data-route="history"] .route-workspace { width:calc(100% - 24px); } .saved-song-row, .history-route-row { padding:12px; gap:8px; } }
+    body[data-route="playlists"] .route-workspace { width:calc(100% - 48px); max-width:1200px; margin:20px auto 110px; }
+    .playlist-route-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+    .playlist-route-card { min-height:150px; display:flex; flex-direction:column; justify-content:space-between; padding:18px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:linear-gradient(145deg,rgba(124,106,247,.17),rgba(18,15,30,.72)); box-shadow:0 10px 28px rgba(0,0,0,.16); }
+    .playlist-route-card:hover { border-color:var(--accent2); transform:translateY(-2px); transition:.2s ease; }
+    .playlist-route-card.add-card { align-items:center; justify-content:center; border-style:dashed; color:var(--accent2); cursor:pointer; text-align:center; }
+    .playlist-route-card.add-card strong { margin-top:10px; color:var(--text); }
+    .playlist-route-card.add-card small { color:var(--text-muted); }
+    .playlist-route-card-icon { font-size:1.7rem; }
+    .playlist-route-card strong { display:block; margin-top:12px; font-size:.95rem; }
+    .playlist-route-card small { display:block; margin-top:5px; color:var(--text-muted); font-size:.72rem; }
+    @media (max-width:760px) { body[data-route="playlists"] .route-workspace { width:calc(100% - 24px); } }
     @media (max-width:760px) { .home-add-track { width:calc(100% - 24px); margin:12px auto 16px; } .home-add-track form { flex-wrap:wrap; } .home-add-track input { flex-basis:100%; } }
     @media (max-width:760px) { .route-workspace { width:calc(100% - 24px); margin:12px auto 16px; padding:16px; } .route-workspace-grid { grid-template-columns:1fr; } .route-workspace-head { flex-direction:column; } }
     body.stats-view #statsOverlay .history-section { display:none; }
@@ -2051,7 +2077,8 @@ const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
 const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
 const MUSIC_USER_KEY = 'mymusic_user';
-const musicDb = { playlists: [], favorites: [], libraryHidden: [] };
+const musicDb = { playlists: [], favorites: [], history: [], libraryHidden: [] };
+window.musicDb = musicDb;
 
 function getMusicUser() {
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
@@ -2080,7 +2107,7 @@ async function bootstrapMusicLibrary() {
   const script = document.createElement('script');
   const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
   const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
-  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.libraryHidden = data.libraryHidden || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); } cleanup(); };
+  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.history = data.history || []; musicDb.libraryHidden = data.libraryHidden || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); window.dispatchEvent(new CustomEvent('music-library-updated')); } cleanup(); };
   script.onerror = cleanup;
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
@@ -2099,6 +2126,7 @@ function currentMusicSong() {
 function postMusicAction(body) {
   return fetch(MUSIC_SHEET_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, ...getMusicUser() }) });
 }
+window.postMusicAction = postMusicAction;
 
 function syncMiniMusicActions() {
   const song = currentMusicSong();
