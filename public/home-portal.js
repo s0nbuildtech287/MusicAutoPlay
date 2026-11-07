@@ -373,6 +373,7 @@
       localStorage.setItem(AUTH_STORAGE_KEY, '1');
       localStorage.setItem(USER_STORAGE_KEY, u);
       unlockPlayerAndDismiss(u);
+      window.bootstrapMusicLibrary?.();
     }
   }
 

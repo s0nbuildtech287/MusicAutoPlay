@@ -2112,7 +2112,7 @@ const GUEST_SONGS = [
 ];
 
 function isGuestMode() {
-  return localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1' || getMusicUser().userId === 'guest';
+  return getMusicUser().userId === 'guest';
 }
 window.isMusicGuestMode = isGuestMode;
 window.requireMusicLogin = function requireMusicLogin() {
@@ -2122,8 +2122,8 @@ window.requireMusicLogin = function requireMusicLogin() {
 };
 
 function getMusicUser() {
-  if (localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') return { userId: 'guest', displayName: 'Guest' };
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
+  if (!raw && localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') return { userId: 'guest', displayName: 'Guest' };
   try {
     const user = JSON.parse(raw);
     return { userId: user.username || user.userId || 'guest', displayName: user.displayName || user.name || user.username || 'Guest' };
@@ -2193,6 +2193,7 @@ async function bootstrapMusicLibrary() {
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
 }
+window.bootstrapMusicLibrary = bootstrapMusicLibrary;
 
 async function saveSongToSheet(song) {
   if (isGuestMode()) return;

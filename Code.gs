@@ -131,7 +131,7 @@ function doGet(e) {
   }
   if ((p.action || "bootstrap") !== "bootstrap") return json_({ ok: false, error: "Unknown action" });
   const userId = ensureUser_(p.userId || "guest", p.displayName || "");
-  let playlists = rows_("playlists").filter((row) => !row.userId || String(row.userId) === userId);
+  let playlists = rows_("playlists").filter((row) => String(row.userId) === userId);
   if (playlists.length === 0) {
     const playlist = { id: Utilities.getUuid(), userId, name: "Playlist mặc định", topic: "Chung", createdAt: new Date().toISOString() };
     append_("playlists", playlist);
@@ -143,7 +143,7 @@ function doGet(e) {
     ok: true,
     users: rows_("users").filter((row) => String(row.userId) === userId),
     playlists,
-    songs: rows_("songs").filter((row) => !libraryHidden.includes(String(row.vid)) && (!row.userId || String(row.userId) === userId || playlistIds.has(String(row.playlistId)))),
+    songs: rows_("songs").filter((row) => !libraryHidden.includes(String(row.vid)) && (String(row.userId) === userId || playlistIds.has(String(row.playlistId)))),
     libraryHidden,
     favorites: rows_("favorites").filter((row) => String(row.userId) === userId),
     history: rows_("history").filter((row) => String(row.userId) === userId).slice(-500)
