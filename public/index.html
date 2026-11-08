@@ -2114,6 +2114,7 @@ const resumeNo     = $('resumeNo');
 const autoplayOverlay = $('autoplayOverlay');
 const startBtn     = $('startBtn');
 const MUSIC_SHEET_API = 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
+window.MUSIC_SHEET_API = MUSIC_SHEET_API;
 const MUSIC_USER_KEY = 'mymusic_user';
 const MUSIC_GUEST_MODE_KEY = 'mymusic_guest_mode';
 const musicDb = { playlists: [], favorites: [], history: [], libraryHidden: [] };
@@ -2163,7 +2164,16 @@ window.getMusicLocalHistory = function getMusicLocalHistory() {
 
 function applySheetSongs(songs, keepCurrent = false) {
   const currentVid = keepCurrent ? currentMusicSong()?.vid : null;
-  state.songs = (songs || []).filter(song => song && song.url && song.vid).map((song, index) => ({
+  const seenKeys = new Set();
+  const uniqueSongs = (songs || []).filter(song => {
+    if (!song || !song.url || !song.vid) return false;
+    const pId = String(song.playlistId || '');
+    const key = `${pId}::${song.vid}`;
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
+    return true;
+  });
+  state.songs = uniqueSongs.map((song, index) => ({
     stt: index + 1, name: song.userId || getMusicUser().displayName, title: song.title || song.vid, artist: song.artist || 'YouTube', url: song.url, vid: song.vid,
     playlistId: song.playlistId || (isGuestMode() ? 'guest-default' : '')
   }));
@@ -2234,12 +2244,39 @@ async function bootstrapMusicLibrary() {
   const script = document.createElement('script');
   const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
   const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
-  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.history = data.history || []; musicDb.libraryHidden = data.libraryHidden || []; musicLoadedUserId = user.userId; applySheetSongs(data.songs || [], !switchingUser); syncMiniMusicActions(); window.dispatchEvent(new CustomEvent('music-library-updated')); } cleanup(); };
+  window[callbackName] = data => {
+    if (data && data.ok) {
+      musicDb.playlists = data.playlists || [];
+      const seenFavVids = new Set();
+      musicDb.favorites = (data.favorites || []).filter(f => {
+        if (!f || !f.vid || seenFavVids.has(String(f.vid))) return false;
+        seenFavVids.add(String(f.vid));
+        return true;
+      });
+      musicDb.history = data.history || [];
+      musicDb.libraryHidden = data.libraryHidden || [];
+      musicLoadedUserId = user.userId;
+      applySheetSongs(data.songs || [], !switchingUser);
+      syncMiniMusicActions();
+      window.dispatchEvent(new CustomEvent('music-library-updated'));
+    }
+    cleanup();
+  };
   script.onerror = cleanup;
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
 }
 window.bootstrapMusicLibrary = bootstrapMusicLibrary;
+
+window.state = state;
+
+window.removeSongFromPlaylist = function(playlistId, vid) {
+  if (!playlistId || !vid) return;
+  state.songs = state.songs.filter(s => !(String(s.playlistId || '') === String(playlistId) && String(s.vid) === String(vid)));
+  toast('Đã xóa bài khỏi playlist');
+  window.dispatchEvent(new CustomEvent('music-library-updated'));
+  postMusicAction({ action: 'removeSongFromPlaylist', playlistId, vid }).catch(console.warn);
+};
 
 async function saveSongToSheet(song) {
   if (isGuestMode()) return;
@@ -2269,32 +2306,101 @@ function openPlaylistPicker() {
   if (window.requireMusicLogin?.()) return;
   const song = currentMusicSong(); const overlay = $('playlistPickerOverlay'); const list = $('playlistPickerList');
   if (!song || !overlay || !list) { toast('⚠️ Chưa có bài đang phát'); return; }
-  list.innerHTML = musicDb.playlists.length ? musicDb.playlists.map(playlist => `<button class="playlist-picker-item" data-playlist-id="${playlist.id}"><span>📁 ${escapeHTML(playlist.name)}</span><small>${escapeHTML(playlist.topic || 'Chung')}</small></button>`).join('') : '<div class="empty-playlist">Chưa có playlist nào. Hãy tạo playlist mới.</div>';
-  list.querySelectorAll('[data-playlist-id]').forEach(button => button.addEventListener('click', async () => {
-    await postMusicAction({ action: 'addSong', playlistId: button.dataset.playlistId, title: song.title, artist: song.artist, url: song.url, vid: song.vid });
-    overlay.classList.remove('active'); overlay.classList.add('hidden'); toast('✅ Đã thêm vào playlist');
+  list.innerHTML = musicDb.playlists.length ? musicDb.playlists.map(playlist => {
+    const inPlaylist = state.songs.some(s => String(s.playlistId || '') === String(playlist.id) && String(s.vid) === String(song.vid));
+    return `<button class="playlist-picker-item ${inPlaylist ? 'already-in-playlist' : ''}" data-playlist-id="${playlist.id}"><span>📁 ${escapeHTML(playlist.name)}</span><small>${inPlaylist ? '✓ Đã có trong playlist' : escapeHTML(playlist.topic || 'Chung')}</small></button>`;
+  }).join('') : '<div class="empty-playlist">Chưa có playlist nào. Hãy tạo playlist mới.</div>';
+
+  let isSubmitting = false;
+  list.querySelectorAll('[data-playlist-id]').forEach(button => button.addEventListener('click', () => {
+    if (isSubmitting) return;
+    const playlistId = button.dataset.playlistId;
+
+    const alreadyExists = state.songs.some(s => String(s.playlistId || '') === String(playlistId) && String(s.vid) === String(song.vid));
+    if (alreadyExists) {
+      toast('⚠️ Bài này đã có trong playlist rồi!');
+      overlay.classList.remove('active');
+      overlay.classList.add('hidden');
+      return;
+    }
+
+    isSubmitting = true;
+    button.style.pointerEvents = 'none';
+    button.style.opacity = '0.6';
+
+    // OPTIMISTIC UPDATE: Instant 0ms!
+    overlay.classList.remove('active');
+    overlay.classList.add('hidden');
+    toast('✅ Đã thêm vào playlist');
+
+    const newSong = {
+      ...song,
+      stt: state.songs.length + 1,
+      name: getMusicUser().displayName,
+      playlistId: playlistId
+    };
+    state.songs.push(newSong);
+    window.dispatchEvent(new CustomEvent('music-library-updated'));
+
+    postMusicAction({ action: 'addSong', playlistId: playlistId, title: song.title, artist: song.artist, url: song.url, vid: song.vid })
+      .catch(err => console.warn('Background playlist sync warning:', err));
   }));
   overlay.classList.remove('hidden'); overlay.classList.add('active');
 }
 
 function initMiniMusicActions() {
-  $('miniFavorite')?.addEventListener('click', async () => {
+  let isTogglingFav = false;
+  $('miniFavorite')?.addEventListener('click', () => {
     if (window.requireMusicLogin?.()) return;
+    if (isTogglingFav) return;
     const song = currentMusicSong(); if (!song) return toast('⚠️ Chưa có bài đang phát');
+    isTogglingFav = true;
+    setTimeout(() => { isTogglingFav = false; }, 400);
+
     const exists = musicDb.favorites.some(item => String(item.vid) === String(song.vid));
-    await postMusicAction({ action: 'toggleFavorite', song });
+
+    // OPTIMISTIC UPDATE: Instant 0ms!
     musicDb.favorites = exists ? musicDb.favorites.filter(item => String(item.vid) !== String(song.vid)) : [...musicDb.favorites, { vid: song.vid, songJson: JSON.stringify(song) }];
-    syncMiniMusicActions(); toast(exists ? 'Đã bỏ khỏi yêu thích' : '💜 Đã thêm vào yêu thích');
+    syncMiniMusicActions();
+    toast(exists ? 'Đã bỏ khỏi yêu thích' : '💜 Đã thêm vào yêu thích');
+    window.dispatchEvent(new CustomEvent('music-library-updated'));
+
+    postMusicAction({ action: 'toggleFavorite', song }).catch(console.warn);
   });
   $('miniPlaylist')?.addEventListener('click', openPlaylistPicker);
   $('closePlaylistPicker')?.addEventListener('click', () => { $('playlistPickerOverlay')?.classList.remove('active'); $('playlistPickerOverlay')?.classList.add('hidden'); });
   $('playlistPickerOverlay')?.addEventListener('click', event => { if (event.target.id === 'playlistPickerOverlay') { event.currentTarget.classList.remove('active'); event.currentTarget.classList.add('hidden'); } });
+
+  let isCreating = false;
   $('createPlaylistBtn')?.addEventListener('click', async () => {
     if (window.requireMusicLogin?.()) return;
-    const name = $('newPlaylistName')?.value.trim(); const topic = $('newPlaylistTopic')?.value.trim() || 'Chung';
-    if (!name) return $('newPlaylistName')?.focus();
-    await postMusicAction({ action: 'createPlaylist', name, topic });
-    musicDb.playlists.push({ id: `local-${Date.now()}`, name, topic }); $('newPlaylistName').value = ''; $('newPlaylistTopic').value = ''; openPlaylistPicker(); toast('✅ Đã tạo playlist mới');
+    if (isCreating) return;
+    const nameInput = $('newPlaylistName');
+    const topicInput = $('newPlaylistTopic');
+    const name = nameInput?.value.trim();
+    const topic = topicInput?.value.trim() || 'Chung';
+    if (!name) return nameInput?.focus();
+
+    isCreating = true;
+    const createBtn = $('createPlaylistBtn');
+    if (createBtn) { createBtn.disabled = true; createBtn.textContent = '⏳ Đang tạo...'; }
+
+    // OPTIMISTIC UPDATE: Instant 0ms!
+    const tempId = `local-${Date.now()}`;
+    musicDb.playlists.push({ id: tempId, name, topic });
+    nameInput.value = '';
+    if (topicInput) topicInput.value = '';
+    openPlaylistPicker();
+    toast('✅ Đã tạo playlist mới');
+
+    try {
+      await postMusicAction({ action: 'createPlaylist', name, topic });
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      isCreating = false;
+      if (createBtn) { createBtn.disabled = false; createBtn.textContent = '＋ Tạo mới'; }
+    }
   });
 }
 initMiniMusicActions();
@@ -2304,14 +2410,20 @@ async function removeSongFromLibrary(song, event) {
   if (!song?.vid) return;
   if (window.requireMusicLogin?.()) return;
   if (!await window.appConfirm(`Xóa "${song.title || song.vid}" khỏi thư viện? Bài vẫn giữ trong Yêu thích và Playlist.`)) return;
-  await postMusicAction({ action: 'removeFromLibrary', vid: song.vid });
-  musicDb.libraryHidden = [...new Set([...musicDb.libraryHidden, String(song.vid)])];
-  state.songs = state.songs.filter(item => String(item.vid) !== String(song.vid));
+
+  // OPTIMISTIC UPDATE: Remove instantly (0ms) from UI!
+  const targetVid = String(song.vid);
+  musicDb.libraryHidden = [...new Set([...musicDb.libraryHidden, targetVid])];
+  state.songs = state.songs.filter(item => String(item.vid) !== targetVid);
   state.members = [...new Set(state.songs.map(item => item.name))];
   state.activeMembers = new Set(state.members);
   renderFilterChips();
   buildPlaylist(true);
   toast('Đã xóa khỏi thư viện');
+  window.dispatchEvent(new CustomEvent('music-library-updated'));
+
+  // Background call
+  postMusicAction({ action: 'removeFromLibrary', vid: targetVid }).catch(console.warn);
 }
 
 (function initYoutubeAddForm() {
@@ -2319,29 +2431,63 @@ async function removeSongFromLibrary(song, event) {
   const urlInput = $('youtubeAddUrl');
   const titleInput = $('youtubeAddTitle');
   const button = $('youtubeAddBtn');
-  if (!form || !urlInput) return;
+  if (!form || !urlInput || !button) return;
+
+  let isAdding = false;
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (window.requireMusicLogin?.()) return;
+    if (isAdding) return;
+
     const url = urlInput.value.trim();
     const vid = extractVideoId(url);
     if (!vid) { toast('⚠️ Link YouTube không hợp lệ'); return; }
+
+    // Kiểm tra trùng lặp trong Thư viện
+    const alreadyInLibrary = state.songs.some(s => (!s.playlistId || s.playlistId === '') && String(s.vid) === String(vid));
+    if (alreadyInLibrary) {
+      toast('⚠️ Bài này đã có trong thư viện của bạn rồi!');
+      return;
+    }
+
     const enteredTitle = titleInput.value.trim();
-    const song = { stt: state.songs.length + 1, name: getMusicUser().displayName, title: enteredTitle, artist: 'YouTube', url, vid };
+    isAdding = true;
     button.disabled = true;
+    const origBtnText = button.innerHTML;
+    button.innerHTML = '<span>⏳ Đang thêm...</span>';
+    toast('⏳ Đang lấy thông tin & lưu bài hát...');
+
+    // OPTIMISTIC UPDATE: Add immediately to state so user sees it right away!
+    const tempSong = {
+      stt: state.songs.length + 1,
+      name: getMusicUser().displayName,
+      title: enteredTitle || `YouTube (${vid})`,
+      artist: 'YouTube',
+      url,
+      vid,
+      playlistId: ''
+    };
+    state.songs.push(tempSong);
+    state.members = [...new Set([...state.members, tempSong.name])];
+    state.activeMembers.add(tempSong.name);
+    renderFilterChips();
+    buildPlaylist(false);
+
+    urlInput.value = '';
+    titleInput.value = '';
+
     try {
-      await saveSongToSheet(song);
-      // Apps Script resolves the YouTube title server-side. Reload the account
-      // data so the UI shows that resolved title instead of the video ID.
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await bootstrapMusicLibrary();
-      urlInput.value = '';
-      titleInput.value = '';
+      await saveSongToSheet(tempSong);
+      bootstrapMusicLibrary().catch(console.warn);
       toast('✅ Đã thêm bài hát vào thư viện');
     } catch (error) {
       console.error(error);
-      toast('⚠️ Không thể lưu bài hát vào Sheet');
-    } finally { button.disabled = false; }
+      toast('⚠️ Đã thêm cục bộ, đang đợi đồng bộ...');
+    } finally {
+      isAdding = false;
+      button.disabled = false;
+      button.innerHTML = origBtnText;
+    }
   });
 })();
 
@@ -4617,8 +4763,8 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
-<script src="/app-shell.js?v=3"></script>
+<script src="/app-shell.js?v=4"></script>
   <!-- Home Landing Portal & Auth System -->
-  <script src="/home-portal.js?v=7"></script>
+  <script src="/home-portal.js?v=8"></script>
 </body>
 </html>

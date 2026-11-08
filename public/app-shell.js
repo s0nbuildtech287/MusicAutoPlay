@@ -49,12 +49,38 @@
       const playlists = window.musicDb?.playlists || [];
       const renderPlaylistDetail = (playlist) => {
         const librarySongs = window.getMusicLibrarySongs?.() || [];
-        const songs = librarySongs.filter(song => String(song.playlistId || '') === String(playlist.id));
+        const seenVids = new Set();
+        const songs = librarySongs.filter(song => {
+          if (String(song.playlistId || '') !== String(playlist.id)) return false;
+          if (seenVids.has(String(song.vid))) return false;
+          seenVids.add(String(song.vid));
+          return true;
+        });
         const visibleSongs = songs.length || !window.isMusicGuestMode?.() || String(playlist.id) !== 'guest-default' ? songs : librarySongs;
-        const rows = visibleSongs.map((song, index) => `<article class="saved-song-row playlist-song-row"><span class="saved-song-index">${index + 1}</span><div class="saved-song-info"><strong>${safe(song.title || song.vid)}</strong><small>${safe(song.artist || 'YouTube')}</small></div><button class="btn btn-primary playlist-play-btn" data-play-vid="${safe(song.vid)}">▶ Phát</button></article>`).join('');
+        const rows = visibleSongs.map((song, index) => `<article class="saved-song-row playlist-song-row">
+          <span class="saved-song-index">${index + 1}</span>
+          <div class="saved-song-info">
+            <strong>${safe(song.title || song.vid)}</strong>
+            <small>${safe(song.artist || 'YouTube')}</small>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-primary playlist-play-btn" data-play-vid="${safe(song.vid)}">▶ Phát</button>
+            <button class="btn btn-ghost playlist-remove-item-btn" data-remove-vid="${safe(song.vid)}" title="Xóa khỏi playlist" style="padding:6px 10px;font-size:0.85rem;color:var(--text-muted);border-color:transparent;">🗑</button>
+          </div>
+        </article>`).join('');
         routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><button class="btn btn-ghost playlist-back-btn" id="playlistBackBtn">← Tất cả playlist</button><span class="eyebrow">PLAYLIST</span><h2>${safe(playlist.name || 'Playlist')}</h2><p>${safe(playlist.topic || 'Chung')} · ${visibleSongs.length} bài</p></div><span class="route-workspace-badge">${visibleSongs.length} BÀI</span></div>${rows ? `<div class="saved-song-list">${rows}</div>` : '<div class="route-empty">Playlist này chưa có bài hát.</div>'}`;
         $('playlistBackBtn')?.addEventListener('click', () => renderRouteWorkspace('playlists'));
         routeWorkspace.querySelectorAll('[data-play-vid]').forEach(button => button.addEventListener('click', () => window.playMusicSongByVid?.(button.dataset.playVid)));
+        routeWorkspace.querySelectorAll('.playlist-remove-item-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const vid = btn.dataset.removeVid;
+          if (!vid) return;
+          if (!await window.appConfirm?.(`Xóa bài hát này khỏi playlist "${playlist.name}"?`)) return;
+          if (typeof window.removeSongFromPlaylist === 'function') {
+            window.removeSongFromPlaylist(playlist.id, vid);
+          }
+          renderPlaylistDetail(playlist);
+        }));
       };
       const cards = playlists.map(playlist => `<article class="playlist-route-card" data-playlist-id="${safe(playlist.id)}" role="button" tabindex="0"><div><div class="playlist-route-card-icon">📁</div><strong>${safe(playlist.name || 'Playlist')}</strong><small>${safe(playlist.topic || 'Chung')}</small></div><small>${playlist.songCount ? `${playlist.songCount} bài` : 'Playlist cá nhân'} · Mở playlist →</small></article>`).join('');
       routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR PLAYLISTS</span><h2>Playlist & chủ đề</h2><p>Chọn một playlist để quản lý các bài hát theo từng không gian nghe.</p></div><span class="route-workspace-badge">${playlists.length} PLAYLIST</span></div><div class="playlist-route-grid">${cards}<article class="playlist-route-card add-card" id="routeCreatePlaylist"><div class="playlist-route-card-icon">＋</div><strong>Tạo playlist mới</strong><small>Thêm playlist theo chủ đề</small></article></div>`;

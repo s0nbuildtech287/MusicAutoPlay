@@ -266,6 +266,44 @@
       alertBox.style.display = 'flex';
     }
 
+    function requestSheetApi(params, timeoutMs = 8000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'myMusicAuthCb_' + Math.random().toString(36).substring(2) + '_' + Date.now();
+        const query = new URLSearchParams({
+          ...params,
+          callback: callbackName,
+          t: String(Date.now())
+        });
+        const apiUrl = window.MUSIC_SHEET_API || 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec';
+        const script = document.createElement('script');
+        let timer = null;
+
+        const cleanup = () => {
+          if (timer) clearTimeout(timer);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        };
+
+        timer = setTimeout(() => {
+          cleanup();
+          reject(new Error('Timeout'));
+        }, timeoutMs);
+
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error('Network error'));
+        };
+
+        script.src = `${apiUrl}?${query.toString()}`;
+        document.head.appendChild(script);
+      });
+    }
+
     // Toggle password
     if (togglePass && passField) {
       togglePass.onclick = (e) => {
@@ -299,7 +337,7 @@
     if (heroRegisterBtn) heroRegisterBtn.onclick = showRegister;
     if (loginBackBtn) loginBackBtn.onclick = showHero;
 
-    registerForm?.addEventListener('submit', (event) => {
+    registerForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const username = document.getElementById('portalRegisterUsername')?.value.trim() || '';
       const password = document.getElementById('portalRegisterPassword')?.value || '';
@@ -307,16 +345,46 @@
       if (username.length < 3) return showAlert('Tên đăng nhập cần ít nhất 3 ký tự!');
       if (password.length < 4) return showAlert('Mật khẩu cần ít nhất 4 ký tự!');
       if (password !== confirmPassword) return showAlert('Mật khẩu xác nhận không khớp!');
-      const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
-      if (accounts[username]) return showAlert('Tên đăng nhập đã tồn tại!');
-      fetch(window.MUSIC_SHEET_API || 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec', {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'register', userId: username, displayName: username, password })
-      }).catch(error => console.warn('Không thể đồng bộ tài khoản lên Sheet:', error));
-      accounts[username] = { password, createdAt: new Date().toISOString() };
-      localStorage.setItem('mymusic_accounts', JSON.stringify(accounts));
-      showAlert('Đăng ký thành công, đang đăng nhập...', false);
-      performLogin(username, password);
+
+      const submitBtn = registerForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Đang đăng ký...';
+      }
+
+      try {
+        const res = await requestSheetApi({ action: 'register', username, password, displayName: username });
+        if (res && res.ok) {
+          const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
+          accounts[username] = { password, createdAt: new Date().toISOString() };
+          localStorage.setItem('mymusic_accounts', JSON.stringify(accounts));
+          showAlert('✅ Đăng ký thành công! Đang đăng nhập...', false);
+          setTimeout(() => performLogin(username, password), 500);
+        } else {
+          showAlert('❌ ' + (res?.error || 'Tên đăng nhập đã tồn tại!'));
+        }
+      } catch (err) {
+        // Fallback: check local accounts
+        const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
+        if (accounts[username]) {
+          showAlert('❌ Tên đăng nhập đã tồn tại!');
+        } else {
+          accounts[username] = { password, createdAt: new Date().toISOString() };
+          localStorage.setItem('mymusic_accounts', JSON.stringify(accounts));
+          fetch(window.MUSIC_SHEET_API || 'https://script.google.com/macros/s/AKfycbyFGVPMlMRFwzCXF9BYd_xJeQqFGn51dXuiP9NBS4fag2RHp-4IG5MOkXsrWJJLR0v0hQ/exec', {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'register', userId: username, displayName: username, password })
+          }).catch(console.warn);
+          showAlert('✅ Đăng ký thành công! Đang đăng nhập...', false);
+          setTimeout(() => performLogin(username, password), 500);
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      }
     });
     document.getElementById('portalBackToLoginBtn')?.addEventListener('click', showLogin);
 
@@ -350,19 +418,53 @@
 
     // Form submit
     if (form) {
-      form.onsubmit = (e) => {
+      form.onsubmit = async (e) => {
         e.preventDefault();
         const username = userField ? userField.value.trim() : '';
         const password = passField ? passField.value.trim() : '';
 
-        // Auto accept xu4ns0n / 123456
-        if (
-          (username.toLowerCase() === VALID_USER && password === VALID_PASS) ||
-          (username !== '' && password.length >= 4)
-        ) {
-          performLogin(username, password);
-        } else {
-          showAlert('❌ Tên đăng nhập hoặc mật khẩu không chính xác!');
+        if (!username) return showAlert('Vui lòng nhập tên đăng nhập!');
+        if (!password) return showAlert('Vui lòng nhập mật khẩu!');
+
+        // 1. Tài khoản mặc định hệ thống xu4ns0n / 123456
+        if (username.toLowerCase() === VALID_USER.toLowerCase() && password === VALID_PASS) {
+          performLogin(VALID_USER, VALID_PASS);
+          return;
+        }
+
+        // 2. Xác thực tài khoản với Google Sheets qua JSONP
+        const submitBtn = document.getElementById('portalSubmitBtn');
+        const originalHtml = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span>⏳ Đang kiểm tra...</span>';
+        }
+
+        try {
+          const res = await requestSheetApi({ action: 'login', username, password });
+          if (res && res.ok) {
+            const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
+            accounts[username] = { password, createdAt: new Date().toISOString() };
+            localStorage.setItem('mymusic_accounts', JSON.stringify(accounts));
+            performLogin(res.user?.userId || username, password);
+          } else {
+            showAlert('❌ ' + (res?.error || 'Tên đăng nhập hoặc mật khẩu không chính xác!'));
+          }
+        } catch (err) {
+          // Khi mất kết nối hoặc Sheet timeout, kiểm tra bộ nhớ đệm thiết bị
+          const accounts = JSON.parse(localStorage.getItem('mymusic_accounts') || '{}');
+          if (accounts[username] && accounts[username].password === password) {
+            performLogin(username, password);
+          } else if (accounts[username]) {
+            showAlert('❌ Mật khẩu không chính xác!');
+          } else {
+            showAlert('❌ Tài khoản chưa đăng ký hoặc mật khẩu sai!');
+          }
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+          }
         }
       };
     }

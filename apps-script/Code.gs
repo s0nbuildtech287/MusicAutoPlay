@@ -50,10 +50,13 @@ function append_(key, item) {
 }
 
 function ensureUser_(userId, displayName) {
-  const id = String(userId || "guest");
-  const exists = rows_("users").some((row) => String(row.userId) === id);
+  const id = String(userId || "guest").trim();
+  const exists = rows_("users").some((row) => String(row.userId).toLowerCase() === id.toLowerCase());
   const now = new Date().toISOString();
-  if (!exists) append_("users", { userId: id, displayName: displayName || id, createdAt: now, lastSeenAt: now });
+  // CHỈ tự động tạo tài khoản guest. Người dùng thật bắt buộc phải qua Đăng ký để có mật khẩu!
+  if (!exists && id.toLowerCase() === "guest") {
+    append_("users", { userId: "guest", displayName: "Guest", password: "", createdAt: now, lastSeenAt: now });
+  }
   return id;
 }
 
@@ -129,6 +132,38 @@ function doGet(e) {
   if (p.action === "repairTitles") {
     return response_({ ok: true, repaired: repairSongTitles_() }, e);
   }
+  if (p.action === "login") {
+    const username = String(p.username || p.userId || "").trim();
+    const password = String(p.password || "").trim();
+    if (!username || !password) {
+      return response_({ ok: false, error: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!" }, e);
+    }
+    if (username.toLowerCase() === "xu4ns0n" && password === "123456") {
+      return response_({ ok: true, user: { userId: "xu4ns0n", displayName: "xu4ns0n" } }, e);
+    }
+    const allUsers = rows_("users");
+    const user = allUsers.find(u => String(u.userId).toLowerCase() === username.toLowerCase());
+    if (!user) {
+      return response_({ ok: false, error: "Tài khoản chưa tồn tại. Vui lòng bấm Đăng ký trước!" }, e);
+    }
+    if (String(user.password || "") !== password) {
+      return response_({ ok: false, error: "Mật khẩu không chính xác!" }, e);
+    }
+    return response_({ ok: true, user: { userId: user.userId, displayName: user.displayName || user.userId } }, e);
+  }
+  if (p.action === "register") {
+    const username = String(p.username || p.userId || "").trim();
+    const password = String(p.password || "").trim();
+    const displayName = String(p.displayName || username).trim();
+    if (username.length < 3) return response_({ ok: false, error: "Tên đăng nhập cần ít nhất 3 ký tự!" }, e);
+    if (password.length < 4) return response_({ ok: false, error: "Mật khẩu cần ít nhất 4 ký tự!" }, e);
+    const allUsers = rows_("users");
+    const exists = allUsers.some(u => String(u.userId).toLowerCase() === username.toLowerCase());
+    if (exists) return response_({ ok: false, error: "Tên đăng nhập đã tồn tại trên hệ thống!" }, e);
+    const now = new Date().toISOString();
+    append_("users", { userId: username, displayName, password, createdAt: now, lastSeenAt: now });
+    return response_({ ok: true, user: { userId: username, displayName } }, e);
+  }
   if ((p.action || "bootstrap") !== "bootstrap") return json_({ ok: false, error: "Unknown action" });
   const userId = ensureUser_(p.userId || "guest", p.displayName || "");
   let playlists = rows_("playlists").filter((row) => String(row.userId) === userId);
@@ -157,11 +192,22 @@ function doPost(e) {
       const username = String(body.userId || body.username || "").trim();
       const password = String(body.password || "");
       if (username.length < 3 || password.length < 4) return json_({ ok: false, error: "Invalid registration data" });
-      const exists = rows_("users").some((row) => String(row.userId) === username);
+      const exists = rows_("users").some((row) => String(row.userId).toLowerCase() === username.toLowerCase());
       if (exists) return json_({ ok: false, error: "Username already exists" });
       const now = new Date().toISOString();
       append_("users", { userId: username, displayName: body.displayName || username, password, createdAt: now, lastSeenAt: now });
       return json_({ ok: true, user: { userId: username, displayName: body.displayName || username } });
+    }
+    if (body.action === "login") {
+      const username = String(body.userId || body.username || "").trim();
+      const password = String(body.password || "").trim();
+      if (username.toLowerCase() === "xu4ns0n" && password === "123456") {
+        return json_({ ok: true, user: { userId: "xu4ns0n", displayName: "xu4ns0n" } });
+      }
+      const user = rows_("users").find((row) => String(row.userId).toLowerCase() === username.toLowerCase());
+      if (!user) return json_({ ok: false, error: "Tài khoản chưa tồn tại. Vui lòng bấm Đăng ký trước!" });
+      if (String(user.password || "") !== password) return json_({ ok: false, error: "Mật khẩu không chính xác!" });
+      return json_({ ok: true, user: { userId: user.userId, displayName: user.displayName || user.userId } });
     }
     const userId = ensureUser_(body.userId || "guest", body.displayName || "");
     const now = new Date().toISOString();
@@ -171,25 +217,64 @@ function doPost(e) {
       return json_({ ok: true, playlist });
     }
     if (body.action === "addSong") {
-      const title = String(body.title || "").trim() || youtubeTitle_(body.url, body.vid);
-      const song = { id: Utilities.getUuid(), userId, playlistId: body.playlistId || "", title, artist: body.artist || "YouTube", url: body.url, vid: body.vid, createdAt: now };
+      const pId = String(body.playlistId || "").trim();
+      const vId = String(body.vid || "").trim();
+      if (!vId) return json_({ ok: false, error: "Missing video id" });
+
+      // KIỂM TRA TRÙNG LẶP:
+      // Trong cùng 1 Playlist (nếu pId có giá trị) HOẶC trong Thư viện (nếu pId rỗng)
+      const existing = rows_("songs").some((row) => 
+        String(row.userId).toLowerCase() === userId.toLowerCase() && 
+        String(row.playlistId || "").trim() === pId && 
+        String(row.vid || "").trim() === vId
+      );
+      if (existing) return json_({ ok: true, duplicate: true, message: "Bài hát đã tồn tại trong danh sách này" });
+
+      const title = String(body.title || "").trim() || youtubeTitle_(body.url, vId);
+      const song = { id: Utilities.getUuid(), userId, playlistId: pId, title, artist: body.artist || "YouTube", url: body.url, vid: vId, createdAt: now };
       append_("songs", song);
       return json_({ ok: true, song });
+    }
+    if (body.action === "removeSongFromPlaylist") {
+      const sheet = sheet_("songs");
+      const values = sheet.getDataRange().getValues();
+      const pCol = SHEETS.songs[1].indexOf("playlistId");
+      const vCol = SHEETS.songs[1].indexOf("vid");
+      const uCol = SHEETS.songs[1].indexOf("userId");
+      for (let i = values.length - 1; i >= 1; i--) {
+        if (String(values[i][uCol]).toLowerCase() === userId.toLowerCase() && String(values[i][pCol]) === String(body.playlistId) && String(values[i][vCol]) === String(body.vid)) {
+          sheet.deleteRow(i + 1);
+        }
+      }
+      return json_({ ok: true });
     }
     if (body.action === "removeFromLibrary") {
       const vid = String(body.vid || body.song?.vid || "").trim();
       if (!vid) return json_({ ok: false, error: "Missing video id" });
-      const exists = rows_("libraryHidden").some((row) => String(row.userId) === userId && String(row.vid) === vid);
+      const exists = rows_("libraryHidden").some((row) => String(row.userId).toLowerCase() === userId.toLowerCase() && String(row.vid) === vid);
       if (!exists) append_("libraryHidden", { userId, vid, hiddenAt: now });
       return json_({ ok: true, vid });
     }
     if (body.action === "toggleFavorite") {
       const sheet = sheet_("favorites");
       const values = sheet.getDataRange().getValues();
-      const index = values.findIndex((row, i) => i > 0 && String(row[0]) === userId && String(row[1]) === String(body.song.vid));
-      if (index > 0) sheet.deleteRow(index + 1);
-      else append_("favorites", { userId, vid: body.song.vid, songJson: JSON.stringify(body.song), createdAt: now });
-      return json_({ ok: true, favorite: index <= 0 });
+      const vid = String(body.song?.vid || body.vid || "").trim();
+      if (!vid) return json_({ ok: false, error: "Missing video id" });
+
+      let found = false;
+      // Quét ngược để xóa sạch mọi dòng trùng nếu user từng spam click
+      for (let i = values.length - 1; i >= 1; i--) {
+        if (String(values[i][0]).toLowerCase() === userId.toLowerCase() && String(values[i][1]).trim() === vid) {
+          sheet.deleteRow(i + 1);
+          found = true;
+        }
+      }
+      if (found) {
+        return json_({ ok: true, favorite: false });
+      } else {
+        append_("favorites", { userId, vid, songJson: JSON.stringify(body.song), createdAt: now });
+        return json_({ ok: true, favorite: true });
+      }
     }
     if (body.action === "recordHistory") {
       append_("history", { userId, vid: body.song.vid, title: body.song.title, artist: body.song.artist, playlistId: body.song.playlistId || "", isOrder: !!body.isOrder, playedAt: now });
@@ -199,4 +284,31 @@ function doPost(e) {
   } catch (error) {
     return json_({ ok: false, error: error.message });
   }
+}
+
+// Chạy trực tiếp trong Apps Script editor để dọn sạch dữ liệu (BẢO LƯU 100% trang "Youtube -Mix" và giữ dòng 1 tiêu đề)
+function clearAllSheetData() {
+  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const allSheets = book.getSheets();
+  
+  allSheets.forEach(sheet => {
+    const sheetName = sheet.getName().trim();
+    // Bỏ qua tuyệt đối trang "Youtube -Mix" (và các trang liên quan tới Youtube)
+    if (/youtube/i.test(sheetName)) {
+      Logger.log("BẢO LƯU AN TOÀN (không xóa): " + sheetName);
+      return;
+    }
+    
+    // Chỉ xóa dữ liệu từ dòng 2 trở đi, giữ nguyên dòng 1 tiêu đề
+    if (sheet.getLastRow() > 1) {
+      sheet.deleteRows(2, sheet.getLastRow() - 1);
+      Logger.log("Đã dọn sạch dữ liệu: " + sheetName);
+    }
+  });
+  
+  // Khởi tạo lại tài khoản mẫu mặc định xu4ns0n / 123456
+  const now = new Date().toISOString();
+  append_("users", { userId: "xu4ns0n", displayName: "xu4ns0n", password: "123456", createdAt: now, lastSeenAt: now });
+  
+  Logger.log("Hoàn tất! Trang 'Youtube -Mix' được giữ nguyên vẹn 100%.");
 }
