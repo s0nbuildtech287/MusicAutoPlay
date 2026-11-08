@@ -114,7 +114,7 @@ function showNotification(title, body, icon) {
   if ('Notification' in window && Notification.permission === 'granted') {
     const notification = new Notification(title, {
       body: body,
-      icon: icon || '/favicon.png?v=3',
+      icon: icon || '/favicon.png?v=5',
       tag: 'music-player',
       requireInteraction: false
     });
@@ -291,7 +291,7 @@ window.addEventListener('songStarted', (e) => {
   showNotification(
     `🎵 ${song.title}`,
     `${song.artist} - ${song.name}`,
-    '/favicon.png?v=3'
+    '/favicon.png?v=5'
   );
   
   // Check achievements

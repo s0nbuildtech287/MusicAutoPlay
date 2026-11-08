@@ -31,3 +31,7 @@ yt-dlp_macos
 
 # Vercel
 .vercel/
+
+# Local migration environment
+be/.env
+fe/.env

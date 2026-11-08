@@ -35,7 +35,7 @@
       <!-- Topbar Navigation -->
       <header class="portal-topbar">
         <div class="portal-brand" id="portalBrandClick">
-          <img src="/favicon.png?v=3" alt="MyMusic" class="portal-brand-logo" />
+          <img src="/favicon.png?v=5" alt="MyMusic" class="portal-brand-logo" />
           <div>
             <div class="portal-brand-title">MyMusic <span style="color:#a78bfa;font-weight:400;">Studio</span></div>
             <span class="portal-brand-sub">Intelligent Audio Hub</span>
@@ -104,7 +104,7 @@
 
             <div class="portal-vinyl-disc">
               <div class="portal-center-label">
-                <img src="/favicon.png?v=3" alt="MyMusic" />
+                <img src="/favicon.png?v=5" alt="MyMusic" />
                 <span style="font-size:0.65rem;margin-top:4px;font-weight:700;letter-spacing:1px;color:#c084fc;">MYMUSIC</span>
                 <div class="portal-center-hole"></div>
               </div>
@@ -145,7 +145,7 @@
 
         <div class="portal-header-block">
           <div class="portal-avatar-glow">
-            <img src="/favicon.png?v=3" alt="Logo" />
+            <img src="/favicon.png?v=5" alt="Logo" />
           </div>
           <h2 class="portal-login-title">Cổng Truy Cập Workspace</h2>
           <p class="portal-login-sub">Đăng nhập để kết nối hệ thống phát nhạc nội bộ</p>

@@ -147,3 +147,32 @@ taskkill /F /PID <MÃ_PID_TÌM_ĐƯỢC>
 
 ---
 Chúc các bạn có những giờ làm việc hiệu quả và tràn đầy năng lượng cùng MyMusic Player! 🎵
+# MyMusic Player
+
+Web music player cá nhân, sử dụng React/Vite cho frontend và Node.js/Express cho backend. Google Apps Script + Google Sheet hiện được dùng làm database tạm thời.
+
+## Cấu trúc
+
+```text
+fe/          React + Vite + Zustand + Lucide React
+be/          Node.js + Express API gateway
+apps-script/ Google Apps Script lưu dữ liệu Sheet
+public/      bản web legacy dự phòng
+api/         API legacy của bản web cũ
+people/      assets legacy
+```
+
+## Chạy bản mới
+
+```bash
+cd be && npm install && copy .env.example .env && npm run dev
+cd fe && npm install && npm run dev
+```
+
+## Chạy bản legacy dự phòng
+
+```bash
+npm run legacy:dev
+```
+
+Electron và các file desktop đã được loại bỏ khỏi cấu trúc chính.

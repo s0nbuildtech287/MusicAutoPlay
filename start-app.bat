@@ -1,3 +1,0 @@
-@echo off
-echo Starting MyMusic Player...
-npm start

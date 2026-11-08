@@ -4,11 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎵 MyMusic Player — MyMusic Internal</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-  <link rel="shortcut icon" href="/favicon.ico?v=3" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=3" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=3" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png?v=3" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=5" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png?v=5" />
   <link rel="stylesheet" href="/home-portal.css?v=6" />
   <style>
     /* ─── Reset & Base ─── */
@@ -1144,6 +1143,17 @@
     .close-modal-btn:hover {
       color: var(--text);
     }
+
+    .app-dialog-overlay { position:fixed; inset:0; z-index:3000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(3,3,10,.72); backdrop-filter:blur(9px); opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .app-dialog-overlay.active { opacity:1; pointer-events:auto; }
+    .app-dialog { width:min(460px,100%); background:linear-gradient(145deg,#211735,#12111c); border:1px solid rgba(191,118,255,.42); border-radius:18px; padding:22px; box-shadow:0 22px 70px rgba(0,0,0,.55); transform:translateY(8px) scale(.98); transition:transform .2s ease; }
+    .app-dialog-overlay.active .app-dialog { transform:translateY(0) scale(1); }
+    .app-dialog h3 { margin:0 0 9px; color:#fff; font-size:1.05rem; }
+    .app-dialog p { margin:0; color:var(--text-muted); line-height:1.55; white-space:pre-wrap; }
+    .app-dialog input { width:100%; margin-top:16px; padding:12px 13px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(8,8,18,.55); color:#fff; outline:none; }
+    .app-dialog-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:20px; }
+    .app-dialog-actions button { border:0; border-radius:10px; padding:10px 16px; cursor:pointer; color:#fff; background:#8250dd; font-weight:700; }
+    .app-dialog-actions button.secondary { background:rgba(255,255,255,.1); color:#ddd7e8; }
     
     .stats-grid {
       display: grid;
@@ -1536,7 +1546,7 @@
 
   <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
     <div class="sidebar-brand">
-      <img src="/favicon.png?v=3" alt="MyMusic" />
+      <img src="/favicon.png?v=5" alt="MyMusic" />
       <div><strong>MyMusic</strong><small>Personal Player</small></div>
     </div>
     <nav class="sidebar-nav">
@@ -1592,7 +1602,7 @@
   <!-- App Header -->
   <div class="app-header">
     <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Mở menu">☰</button>
-    <img src="/favicon.png?v=3" alt="Logo" class="app-header-logo" id="logo" />
+    <img src="/favicon.png?v=5" alt="Logo" class="app-header-logo" id="logo" />
     <h1>MyMusic Player</h1>
     <span class="badge">MyMusic Internal</span>
     <div class="header-actions">
@@ -1677,7 +1687,7 @@
           <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
             <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
             <div class="np-avatar" id="npAvatar">
-              <img src="/favicon.png?v=3" alt="Logo" />
+              <img src="/favicon.png?v=5" alt="Logo" />
             </div>
           </div>
           <div id="npContent">
@@ -1815,7 +1825,7 @@
 
   <div class="personal-player-bar" id="personalPlayerBar">
     <div class="mini-track-info">
-      <div class="mini-cover"><img id="miniPlayerCover" src="/favicon.png?v=3" alt="Cover" /></div>
+      <div class="mini-cover"><img id="miniPlayerCover" src="/favicon.png?v=5" alt="Cover" /></div>
       <div class="mini-copy"><strong id="miniPlayerTitle">Chưa phát bài nào</strong><span id="miniPlayerArtist">MyMusic Player</span></div>
     </div>
     <div class="mini-controls">
@@ -1931,6 +1941,14 @@
 
   <!-- Toast Container -->
   <div id="toast-container"></div>
+  <div class="app-dialog-overlay hidden" id="appDialogOverlay" aria-hidden="true">
+    <div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+      <h3 id="appDialogTitle">MyMusic</h3>
+      <p id="appDialogMessage"></p>
+      <input id="appDialogInput" class="hidden" autocomplete="off" />
+      <div class="app-dialog-actions"><button type="button" class="secondary" id="appDialogCancel">Hủy</button><button type="button" id="appDialogOk">OK</button></div>
+    </div>
+  </div>
 
   <!-- Order URL Editor -->
   <div id="orderUrlEditor" class="hidden" style="position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
@@ -2100,6 +2118,7 @@ const MUSIC_USER_KEY = 'mymusic_user';
 const MUSIC_GUEST_MODE_KEY = 'mymusic_guest_mode';
 const musicDb = { playlists: [], favorites: [], history: [], libraryHidden: [] };
 window.musicDb = musicDb;
+let musicLoadedUserId = null;
 
 const GUEST_SONGS = [
   { userId: 'Guest', title: 'Buồn hay vui vsoul', artist: 'YouTube', url: 'https://youtu.be/JV0dEgbX5yk?si=WBdhdSUsw0C1B-Sl', vid: 'JV0dEgbX5yk' },
@@ -2134,7 +2153,16 @@ function getMusicUser() {
   }
 }
 
-function applySheetSongs(songs) {
+function musicHistoryKey_() {
+  const user = getMusicUser();
+  return `mcp_history_${encodeURIComponent(user.userId || 'guest')}`;
+}
+window.getMusicLocalHistory = function getMusicLocalHistory() {
+  try { return JSON.parse(localStorage.getItem(musicHistoryKey_()) || '[]'); } catch (_) { return []; }
+};
+
+function applySheetSongs(songs, keepCurrent = false) {
+  const currentVid = keepCurrent ? currentMusicSong()?.vid : null;
   state.songs = (songs || []).filter(song => song && song.url && song.vid).map((song, index) => ({
     stt: index + 1, name: song.userId || getMusicUser().displayName, title: song.title || song.vid, artist: song.artist || 'YouTube', url: song.url, vid: song.vid,
     playlistId: song.playlistId || (isGuestMode() ? 'guest-default' : '')
@@ -2142,7 +2170,11 @@ function applySheetSongs(songs) {
   state.members = [...new Set(state.songs.map(song => song.name))];
   state.activeMembers = new Set(state.members);
   renderFilterChips();
-  buildPlaylist();
+  buildPlaylist(keepCurrent);
+  if (keepCurrent && currentVid) {
+    const nextIndex = state.playlist.findIndex(song => String(song.vid) === String(currentVid));
+    if (nextIndex >= 0) state.currentIndex = nextIndex;
+  }
 }
 window.getMusicLibrarySongs = () => state.songs;
 window.playMusicSongByVid = (vid) => {
@@ -2180,17 +2212,29 @@ async function bootstrapMusicLibrary() {
       playedAt: new Date(Date.now() - (GUEST_SONGS.length - index) * 3600000).toISOString()
     }));
     musicDb.libraryHidden = [];
+    musicLoadedUserId = 'guest';
     applySheetSongs(GUEST_SONGS);
     syncMiniMusicActions();
     window.dispatchEvent(new CustomEvent('music-library-updated'));
     return;
+  }
+  // Always clear Guest/demo state before loading the real account from Sheet.
+  const switchingUser = musicLoadedUserId !== user.userId;
+  if (switchingUser) {
+    musicDb.playlists = [];
+    musicDb.favorites = [];
+    musicDb.history = [];
+    musicDb.libraryHidden = [];
+    applySheetSongs([]);
+    state.playlist = [];
+    state.currentIndex = -1;
   }
   const callbackName = `myMusicSheetCallback_${Date.now()}`;
   const query = new URLSearchParams({ action: 'bootstrap', userId: user.userId, displayName: user.displayName, callback: callbackName, t: String(Date.now()) });
   const script = document.createElement('script');
   const timeout = setTimeout(() => { cleanup(); console.warn('Không thể tải thư viện nhạc từ Apps Script'); }, 8000);
   const cleanup = () => { clearTimeout(timeout); delete window[callbackName]; script.remove(); };
-  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.history = data.history || []; musicDb.libraryHidden = data.libraryHidden || []; applySheetSongs(data.songs || []); syncMiniMusicActions(); window.dispatchEvent(new CustomEvent('music-library-updated')); } cleanup(); };
+  window[callbackName] = data => { if (data && data.ok) { musicDb.playlists = data.playlists || []; musicDb.favorites = data.favorites || []; musicDb.history = data.history || []; musicDb.libraryHidden = data.libraryHidden || []; musicLoadedUserId = user.userId; applySheetSongs(data.songs || [], !switchingUser); syncMiniMusicActions(); window.dispatchEvent(new CustomEvent('music-library-updated')); } cleanup(); };
   script.onerror = cleanup;
   script.src = `${MUSIC_SHEET_API}?${query}`;
   document.head.appendChild(script);
@@ -2259,7 +2303,7 @@ async function removeSongFromLibrary(song, event) {
   event?.stopPropagation();
   if (!song?.vid) return;
   if (window.requireMusicLogin?.()) return;
-  if (!confirm(`Xóa "${song.title || song.vid}" khỏi thư viện? Bài vẫn giữ trong Yêu thích và Playlist.`)) return;
+  if (!await window.appConfirm(`Xóa "${song.title || song.vid}" khỏi thư viện? Bài vẫn giữ trong Yêu thích và Playlist.`)) return;
   await postMusicAction({ action: 'removeFromLibrary', vid: song.vid });
   musicDb.libraryHidden = [...new Set([...musicDb.libraryHidden, String(song.vid)])];
   state.songs = state.songs.filter(item => String(item.vid) !== String(song.vid));
@@ -2287,11 +2331,10 @@ async function removeSongFromLibrary(song, event) {
     button.disabled = true;
     try {
       await saveSongToSheet(song);
-      state.songs.push({ ...song, title: enteredTitle || vid });
-      state.members = [...new Set([...state.members, song.name])];
-      state.activeMembers.add(song.name);
-      renderFilterChips();
-      buildPlaylist();
+      // Apps Script resolves the YouTube title server-side. Reload the account
+      // data so the UI shows that resolved title instead of the video ID.
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await bootstrapMusicLibrary();
       urlInput.value = '';
       titleInput.value = '';
       toast('✅ Đã thêm bài hát vào thư viện');
@@ -3149,6 +3192,30 @@ function toast(msg, duration = 3000) {
   setTimeout(() => el.remove(), duration);
 }
 
+function appDialog({ title = 'MyMusic', message = '', input = false, value = '', confirm = false } = {}) {
+  const overlay = $('appDialogOverlay');
+  const inputEl = $('appDialogInput');
+  if (!overlay) return Promise.resolve(confirm ? false : (input ? value : true));
+  $('appDialogTitle').textContent = title;
+  $('appDialogMessage').textContent = message;
+  inputEl.value = value;
+  inputEl.classList.toggle('hidden', !input);
+  $('appDialogCancel').classList.toggle('hidden', !confirm && !input);
+  overlay.classList.remove('hidden'); overlay.classList.add('active'); overlay.setAttribute('aria-hidden', 'false');
+  if (input) setTimeout(() => inputEl.focus(), 0);
+  return new Promise(resolve => {
+    const cleanup = () => { $('appDialogOk').removeEventListener('click', ok); $('appDialogCancel').removeEventListener('click', cancel); overlay.removeEventListener('click', outside); };
+    const finish = result => { overlay.classList.remove('active'); overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden', 'true'); cleanup(); resolve(result); };
+    const ok = () => finish(input ? inputEl.value : true);
+    const cancel = () => finish(input ? null : false);
+    const outside = event => { if (event.target === overlay) cancel(); };
+    $('appDialogOk').addEventListener('click', ok); $('appDialogCancel').addEventListener('click', cancel); overlay.addEventListener('click', outside);
+  });
+}
+window.appAlert = message => appDialog({ title: 'Thông báo', message });
+window.appConfirm = message => appDialog({ title: 'Xác nhận', message, confirm: true });
+window.appPrompt = (message, value = '') => appDialog({ title: 'Nhập thông tin', message, input: true, value });
+
 function csvToRows(text) {
   const lines = text.trim().split('\n');
   return lines.map(line => {
@@ -3410,7 +3477,7 @@ function renderNowPlaying() {
     const song = state.currentOrderSong;
     const displayTitle = isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title;
     const memberPhoto = `/people/${song.name}.jpg`;
-    npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=3'" />`;
+    npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=5'" />`;
     npContent.innerHTML = `
       <p class="np-member" style="color:#fb923c">📱 Yêu cầu bởi: ${song.name}</p>
       <p class="np-title">${displayTitle}</p>
@@ -3426,7 +3493,7 @@ function renderNowPlaying() {
   const song = state.playlist[state.currentIndex];
   if (!song) {
     npAvatar.classList.remove('spinning');
-    npAvatar.innerHTML = '<img src="/favicon.png?v=3" alt="Logo" />';
+    npAvatar.innerHTML = '<img src="/favicon.png?v=5" alt="Logo" />';
     npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
     progressArea.style.display = 'none';
     playPauseBtn.textContent = '▶';
@@ -3435,7 +3502,7 @@ function renderNowPlaying() {
 
   // Update avatar with member photo
   const memberPhoto = `/people/${song.name}.jpg`;
-  npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=3'" />`;
+  npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=5'" />`;
 
   npContent.innerHTML = `
     <p class="np-member">👤 ${song.name}</p>
@@ -3517,6 +3584,7 @@ function renderPlaylist() {
   const active = playlistList.querySelector('.is-playing');
   if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
+window.renderMusicPlaylist = renderPlaylist;
 
 function setPlaybackLoading(isLoading, source = 'play') {
   state.isPlaybackLoading = !!isLoading;
@@ -4180,7 +4248,7 @@ function renderHostOrders() {
 
 async function removeOrder(id, event) {
   if (event) event.stopPropagation();
-  if (!confirm('Bạn có chắc chắn muốn xóa yêu cầu này khỏi hàng đợi?')) return;
+  if (!await window.appConfirm('Bạn có chắc chắn muốn xóa yêu cầu này khỏi hàng đợi?')) return;
 
   try {
     const res = await fetch('/api/orders/remove', {
@@ -4367,7 +4435,7 @@ function recordPlayHistory(song, isOrder) {
   if (!song) return;
   let history = [];
   try {
-    const raw = localStorage.getItem('mcp_history');
+    const raw = localStorage.getItem(musicHistoryKey_());
     if (raw) history = JSON.parse(raw);
   } catch (err) {
     console.warn('Failed to parse history:', err);
@@ -4393,7 +4461,7 @@ function recordPlayHistory(song, isOrder) {
     history.shift();
   }
   
-  localStorage.setItem('mcp_history', JSON.stringify(history));
+  localStorage.setItem(musicHistoryKey_(), JSON.stringify(history));
 }
 
 function calculateStats() {
@@ -4446,7 +4514,7 @@ function renderStatsUI() {
       return `
         <div class="leaderboard-item">
           <div class="leaderboard-rank">${rankEmoji}</div>
-          <img class="leaderboard-avatar" src="${avatarSrc}" onerror="this.src='/favicon.png?v=3'" alt="${item.name}">
+          <img class="leaderboard-avatar" src="${avatarSrc}" onerror="this.src='/favicon.png?v=5'" alt="${item.name}">
           <div class="leaderboard-name">${escapeHTML(item.name)}</div>
           <div class="leaderboard-count">${item.count} bài</div>
         </div>
@@ -4517,9 +4585,9 @@ if (statsOverlay) {
 
 // Reset stats
 if (resetStatsBtn) {
-  resetStatsBtn.addEventListener('click', () => {
-    if (confirm('⚠️ Bạn có chắc chắn muốn đặt lại tất cả số liệu thống kê không?')) {
-      localStorage.removeItem('mcp_history');
+  resetStatsBtn.addEventListener('click', async () => {
+    if (await window.appConfirm('⚠️ Bạn có chắc chắn muốn đặt lại tất cả số liệu thống kê không?')) {
+      localStorage.removeItem(musicHistoryKey_());
       renderStatsUI();
       toast('🗑️ Đã đặt lại dữ liệu thống kê!');
     }

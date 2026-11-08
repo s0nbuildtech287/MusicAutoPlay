@@ -70,9 +70,9 @@
       });
       $('routeCreatePlaylist')?.addEventListener('click', async () => {
         if (window.requireMusicLogin?.()) return;
-        const name = window.prompt('Tên playlist mới:');
+        const name = await window.appPrompt?.('Tên playlist mới:');
         if (!name?.trim()) return;
-        const topic = window.prompt('Chủ đề playlist:', 'Chung') || 'Chung';
+        const topic = await window.appPrompt?.('Chủ đề playlist:', 'Chung') || 'Chung';
         if (typeof window.postMusicAction === 'function') await window.postMusicAction({ action: 'createPlaylist', name: name.trim(), topic: topic.trim() || 'Chung' });
         if (window.musicDb) window.musicDb.playlists.push({ id: `local-${Date.now()}`, name: name.trim(), topic: topic.trim() || 'Chung' });
         renderRouteWorkspace('playlists');
@@ -82,7 +82,7 @@
     if (route === 'favorites') {
       const favorites = window.musicDb?.favorites || [];
       let localHistory = [];
-      try { localHistory = JSON.parse(localStorage.getItem('mcp_history') || '[]'); } catch (_) {}
+      localHistory = window.getMusicLocalHistory?.() || [];
       const history = [...(window.musicDb?.history || []), ...localHistory];
       const listens = history.reduce((map, item) => { map[item.vid] = (map[item.vid] || 0) + 1; return map; }, {});
       const songs = favorites.map(item => { try { return JSON.parse(item.songJson || '{}'); } catch (_) { return item; } });
@@ -92,7 +92,7 @@
     }
     if (route === 'history') {
       let localHistory = [];
-      try { localHistory = JSON.parse(localStorage.getItem('mcp_history') || '[]'); } catch (_) {}
+      localHistory = window.getMusicLocalHistory?.() || [];
       const history = [...(window.musicDb?.history || []), ...localHistory].reverse();
       const rows = history.map((item, index) => `<article class="history-route-row"><span class="history-route-index">${index + 1}</span><div class="history-route-info"><strong>${safe(item.title || item.vid)}</strong><small>${safe(item.artist || 'YouTube')}</small></div><time class="history-route-time">${formatDate(item.playedAt || item.timestamp)}</time></article>`).join('');
       routeWorkspace.innerHTML = `<div class="route-workspace-head"><div><span class="eyebrow">YOUR HISTORY</span><h2>Lịch sử nghe</h2><p>Các bài hát đã nghe theo mốc thời gian.</p></div><span class="route-workspace-badge">${history.length} LƯỢT</span></div>${rows ? `<div class="history-route-list">${rows}</div>` : '<div class="route-empty">Chưa có lịch sử nghe nhạc.</div>'}`;
@@ -115,6 +115,7 @@
     const cleanRoute = route || 'home';
     body.dataset.route = cleanRoute;
     renderRouteWorkspace(cleanRoute);
+    if (cleanRoute === 'library') window.renderMusicPlaylist?.();
     document.querySelectorAll('[data-route]').forEach((link) => {
       link.classList.toggle('active', link.dataset.route === cleanRoute);
     });
@@ -288,7 +289,7 @@
     const playlistText = $('playlistCount')?.textContent?.trim();
     if (playlistText && $('shellPlaylistLabel')) $('shellPlaylistLabel').textContent = playlistText;
     try {
-      const history = JSON.parse(localStorage.getItem('mcp_history') || '[]');
+      const history = window.getMusicLocalHistory?.() || [];
       if ($('shellRecentLabel')) $('shellRecentLabel').textContent = history.length ? `${history.length} bài đã nghe` : 'Chưa có lịch sử';
     } catch (_) { /* legacy history may be unavailable */ }
   };
