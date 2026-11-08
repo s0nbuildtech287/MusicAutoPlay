@@ -1,6 +1,23 @@
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
+
+// Detect FFmpeg availability for universal audio transcoding (MP3 for iOS Safari / Android / PC)
+let ffmpegPath = null;
+try {
+  if (os.platform() === 'win32') {
+    execSync('where ffmpeg', { stdio: 'ignore' });
+    ffmpegPath = 'ffmpeg';
+  } else {
+    execSync('which ffmpeg', { stdio: 'ignore' });
+    ffmpegPath = fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
+  }
+} catch {
+  ffmpegPath = null;
+}
+
+console.log(`[StreamEngine] Transcoder: ${ffmpegPath ? `FFmpeg MP3 (Universal iOS/Android/PC at ${ffmpegPath})` : 'Direct WebM Fallback'}`);
 
 // Validate YouTube video ID (11 alphanumeric chars + - _)
 function isValidVideoId(id) {
@@ -30,31 +47,6 @@ function buildArgs(url, attempt) {
   return args;
 }
 
-async function tryStream(ytdlpPath, url, attempt) {
-  return new Promise((resolve, reject) => {
-    const args = buildArgs(url, attempt);
-    const proc = spawn(ytdlpPath, args);
-    let stderrBuf = '';
-
-    proc.stderr.on('data', d => {
-      stderrBuf += d.toString();
-    });
-
-    proc.on('error', err => reject(err));
-
-    // Resolve early with the process so we can pipe stdout
-    // but watch for quick exit with error
-    const timer = setTimeout(() => resolve({ proc, stderrBuf: () => stderrBuf }), 400);
-
-    proc.on('close', code => {
-      clearTimeout(timer);
-      if (code !== 0) {
-        reject(new Error(`yt-dlp exit ${code}: ${stderrBuf.slice(-300)}`));
-      }
-    });
-  });
-}
-
 module.exports = async (req, res) => {
   const { id } = req.query;
 
@@ -74,32 +66,43 @@ module.exports = async (req, res) => {
     try {
       const args = buildArgs(url, attempt);
       const ytdlp = spawn(ytdlpPath, args);
+      let ffmpeg = null;
       let stderrBuf = '';
-      let headersSent = false;
-      let failed = false;
+      let cleaned = false;
+
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { ytdlp.kill('SIGKILL'); } catch {}
+        if (ffmpeg) {
+          try { ffmpeg.kill('SIGKILL'); } catch {}
+        }
+      };
+
+      req.on('close', cleanup);
+      res.on('finish', cleanup);
 
       ytdlp.stderr.on('data', (data) => {
         stderrBuf += data.toString();
-        // Log 403 early so we know to retry
         if (stderrBuf.includes('403') || stderrBuf.includes('Forbidden')) {
           console.warn(`[Stream] 403 on attempt ${attempt}: ${id}`);
         }
       });
 
       ytdlp.on('error', (err) => {
-        failed = true;
-        console.error(`[Stream] Process error attempt ${attempt}:`, err.message);
-        if (!res.headersSent) {
-          if (attempt < MAX_ATTEMPTS) return; // will retry in outer loop via close handler
+        console.error(`[Stream] yt-dlp error on attempt ${attempt}:`, err.message);
+        cleanup();
+        if (!res.headersSent && attempt === MAX_ATTEMPTS) {
           res.status(500).json({ error: 'Failed to start yt-dlp' });
         }
       });
 
-      // Wait a moment to see if yt-dlp exits immediately (error) before piping
+      // Wait a moment to see if yt-dlp exits immediately
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       if (ytdlp.exitCode !== null && ytdlp.exitCode !== 0) {
         console.warn(`[Stream] Attempt ${attempt} failed (exit ${ytdlp.exitCode}), ${attempt < MAX_ATTEMPTS ? 'retrying...' : 'giving up'}`);
+        cleanup();
         if (attempt < MAX_ATTEMPTS) {
           await new Promise(r => setTimeout(r, 500 * attempt));
           continue;
@@ -107,16 +110,49 @@ module.exports = async (req, res) => {
         return res.status(502).json({ error: `yt-dlp failed after ${MAX_ATTEMPTS} attempts`, detail: stderrBuf.slice(-300) });
       }
 
-      // Looks good — start piping
-      if (!res.headersSent) {
-        res.setHeader('Content-Type', 'audio/webm');
-        res.setHeader('Transfer-Encoding', 'chunked');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        headersSent = true;
-      }
+      // If FFmpeg is available, transcode to high-quality MP3 for universal compatibility (iOS/iPhone, Android, PC)
+      if (ffmpegPath) {
+        ffmpeg = spawn(ffmpegPath, [
+          '-i', 'pipe:0',
+          '-vn',
+          '-c:a', 'libmp3lame',
+          '-b:a', '192k',
+          '-f', 'mp3',
+          'pipe:1',
+        ]);
 
-      ytdlp.stdout.pipe(res);
+        // Prevent unhandled EPIPE crashes
+        ytdlp.stdout.on('error', () => {});
+        ffmpeg.stdin.on('error', () => {});
+        ffmpeg.stdout.on('error', () => {});
+        ffmpeg.stderr.on('data', () => {});
+
+        ffmpeg.on('error', (err) => {
+          console.error('[Stream] FFmpeg error:', err.message);
+          cleanup();
+        });
+
+        ytdlp.stdout.pipe(ffmpeg.stdin);
+
+        if (!res.headersSent) {
+          res.setHeader('Content-Type', 'audio/mpeg');
+          res.setHeader('Transfer-Encoding', 'chunked');
+          res.setHeader('Cache-Control', 'no-cache, no-store');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        }
+
+        ffmpeg.stdout.pipe(res);
+
+      } else {
+        // Direct WebM fallback
+        if (!res.headersSent) {
+          res.setHeader('Content-Type', 'audio/webm');
+          res.setHeader('Transfer-Encoding', 'chunked');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        }
+        ytdlp.stdout.pipe(res);
+      }
 
       ytdlp.on('close', (code) => {
         if (code !== 0 && code !== null) {
@@ -126,12 +162,7 @@ module.exports = async (req, res) => {
         }
       });
 
-      req.on('close', () => {
-        console.log(`[Stream] Client disconnected: ${id}`);
-        ytdlp.kill();
-      });
-
-      return; // success — exit retry loop
+      return; // success — exit loop
 
     } catch (err) {
       console.warn(`[Stream] Attempt ${attempt} error: ${err.message}`);
