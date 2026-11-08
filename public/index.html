@@ -1380,7 +1380,11 @@
       border-right: 1px solid rgba(255,255,255,0.08);
       backdrop-filter: blur(20px);
     }
-    .sidebar-brand { display:flex; align-items:center; gap:10px; padding:0 8px; }
+    .sidebar-brand { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 8px; }
+    .sidebar-mobile-close { display:none; width:30px; height:30px; border:1px solid rgba(255,255,255,0.14); border-radius:8px; color:var(--text); background:rgba(255,255,255,0.06); cursor:pointer; align-items:center; justify-content:center; font-size:0.95rem; line-height:1; transition:0.2s ease; }
+    .sidebar-mobile-close:hover { background:rgba(239,68,68,0.25); border-color:#ef4444; color:#fca5a5; }
+    .mobile-nav-backdrop { position:fixed; inset:0; z-index:90; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
+    body.mobile-nav-open .mobile-nav-backdrop { opacity:1; pointer-events:auto; }
     .sidebar-brand img { width:36px; height:36px; border-radius:11px; object-fit:cover; }
     .sidebar-brand strong { display:block; font-size:0.98rem; letter-spacing:-0.02em; }
     .sidebar-brand small { display:block; margin-top:2px; color:var(--text-muted); font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; }
@@ -1556,7 +1560,8 @@
     @media (max-width: 1100px) { .personal-player-bar { grid-template-columns:minmax(160px,1fr) auto minmax(160px,1fr); } .mini-actions { display:flex; } .mini-actions input { width:58px; } .playlist-create-row { grid-template-columns:1fr; } }
     @media (max-width: 760px) {
       body, body.sidebar-collapsed { display:block; padding-bottom:94px; }
-      .app-sidebar { position:fixed; left:0; top:0; width:240px; transform:translateX(-102%); transition:transform .2s ease; }
+      .app-sidebar { position:fixed; left:0; top:0; width:260px; max-width:85vw; z-index:100; box-shadow:0 0 40px rgba(0,0,0,0.85); transform:translateX(-102%); transition:transform .25s cubic-bezier(0.4,0,0.2,1); }
+      .sidebar-mobile-close { display:inline-flex; }
       body.mobile-nav-open .app-sidebar { transform:translateX(0); }
       .app-shell, body.sidebar-collapsed .app-shell { width:100%; margin-left:0; padding-top:12px; }
       .app-header, .resume-banner, .main-layout { width:calc(100% - 24px); }
@@ -1577,10 +1582,14 @@
 </head>
 <body data-route="home">
 
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop" aria-hidden="true"></div>
   <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
     <div class="sidebar-brand">
-      <img src="/favicon.png?v=5" alt="MyMusic" />
-      <div><strong>MyMusic</strong><small>Personal Player</small></div>
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <img src="/favicon.png?v=5" alt="MyMusic" />
+        <div><strong>MyMusic</strong><small>Personal Player</small></div>
+      </div>
+      <button class="sidebar-mobile-close" id="sidebarMobileClose" type="button" aria-label="Đóng menu">✕</button>
     </div>
     <nav class="sidebar-nav">
       <button class="sidebar-link active" data-route="home"><span>⌂</span><b>Home</b></button>

@@ -195,8 +195,14 @@
     body.classList.toggle('sidebar-collapsed', next);
     localStorage.setItem('musicPlayerShellCollapsed', next ? '1' : '0');
   });
+  const closeMobileNav = () => body.classList.remove('mobile-nav-open');
   $('mobileNavToggle')?.addEventListener('click', () => body.classList.toggle('mobile-nav-open'));
-  document.querySelectorAll('.sidebar-link').forEach((link) => link.addEventListener('click', () => body.classList.remove('mobile-nav-open')));
+  $('sidebarMobileClose')?.addEventListener('click', closeMobileNav);
+  $('mobileNavBackdrop')?.addEventListener('click', closeMobileNav);
+  document.querySelectorAll('.sidebar-link').forEach((link) => link.addEventListener('click', closeMobileNav));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && body.classList.contains('mobile-nav-open')) closeMobileNav();
+  });
 
   $('resumeDismiss')?.addEventListener('click', () => {
     $('resumeBanner')?.classList.add('hidden');
