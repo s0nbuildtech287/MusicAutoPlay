@@ -837,14 +837,14 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   📱 RESPONSIVE ADJUSTMENTS
+   📱 RESPONSIVE ADJUSTMENTS (PERFECT MOBILE EXPERIENCE)
    ═══════════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 960px) {
   .portal-container {
     grid-template-columns: 1fr;
     text-align: center;
-    gap: 36px;
-    padding: 20px 0;
+    gap: 28px;
+    padding: 16px 0;
   }
   .portal-hero-left {
     display: flex;
@@ -862,28 +862,203 @@
     justify-content: center;
   }
   .portal-hero-right {
-    height: 300px;
+    height: 280px;
+    overflow: visible;
   }
   .portal-vinyl-stage {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: 220px;
+  }
+  .portal-sound-ring.outer {
+    inset: -20px;
+  }
+  .portal-feature-tag {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-portal-overlay {
+    padding: 14px 16px 36px;
+  }
+  .portal-topbar {
+    padding: 8px 0 16px;
+    gap: 10px;
+  }
+  .portal-brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+  .portal-brand-title {
+    font-size: 1.05rem;
+  }
+  .portal-brand-sub {
+    font-size: 0.65rem;
+  }
+  .portal-nav-actions {
+    gap: 6px;
+  }
+  .portal-btn-sm {
+    padding: 6px 11px;
+    font-size: 0.76rem;
+    border-radius: 8px;
+  }
+  #portalNavDemoBtn {
+    display: none; /* Hide redundant demo button in header on mobile */
+  }
+
+  .portal-container {
+    margin-top: 10px;
+    gap: 20px;
+    padding: 8px 0 30px;
+  }
+  .portal-pill-badge {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+  }
+  .portal-title {
+    font-size: clamp(1.75rem, 6.5vw, 2.3rem);
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  .portal-desc {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+
+  /* Sleek, uniform, non-bloated CTA buttons */
+  .portal-cta-group {
+    width: 100%;
+    max-width: 330px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    margin: 0 auto 18px;
+  }
+  .portal-btn-main {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px; /* Modern sleek border, not bloated/bubbly */
+  }
+
+  /* Clear description / specs without overlapping */
+  .portal-specs {
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto 10px;
+    padding-top: 12px;
+    gap: 8px 12px;
+    font-size: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .portal-spec-item {
+    font-size: 0.74rem;
+  }
+
+  /* Compact, neat vinyl showcase that never overlaps with text */
+  .portal-hero-right {
+    height: auto;
+    min-height: 210px;
+    margin-top: 6px;
+    padding: 10px 0 15px;
+  }
+  .portal-vinyl-stage {
+    width: 180px;
+    height: 180px;
+  }
+  .portal-sound-ring.outer {
+    inset: -12px; /* Contained within bounds - zero bleed into specs! */
+  }
+  .portal-sound-ring {
+    inset: -7px;
+  }
+  .portal-sound-ring.glow {
+    inset: -5px;
+  }
+  .portal-center-label {
+    width: 68px;
+    height: 68px;
+  }
+  .portal-center-label img {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+  }
+  .portal-center-label span {
+    font-size: 0.5rem !important;
+  }
+
+  /* Scaled feature tags with safe bounds */
+  .portal-feature-tag {
+    padding: 5px 9px;
+    font-size: 0.68rem;
+    border-radius: 8px;
+    gap: 5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  .portal-feature-tag.tag-1 {
+    top: -6px;
+    right: -8px;
+  }
+  .portal-feature-tag.tag-2 {
+    bottom: 18px;
+    left: -12px;
+  }
+  .portal-feature-tag.tag-3 {
+    bottom: -8px;
+    right: 4px;
+  }
+
+  .portal-bottom-wave {
+    bottom: 10px;
+    width: calc(100% - 24px);
+    height: 42px;
+    gap: 3px;
+    opacity: 0.28;
+  }
+  .portal-bottom-wave span {
+    width: 3px;
   }
 }
 
 @media (max-width: 480px) {
   .portal-login-modal {
-    padding: 24px 18px;
+    padding: 22px 16px;
+    border-radius: 18px;
   }
-  .portal-title {
-    font-size: 2.1rem;
+  .portal-login-title {
+    font-size: 1.25rem;
   }
-  .portal-bottom-wave {
-    bottom: 18px;
-    width: calc(100% - 28px);
-    height: 58px;
-    gap: 3px;
+  .portal-login-sub {
+    font-size: 0.8rem;
   }
-  .portal-bottom-wave span {
-    width: 3px;
+  .portal-vinyl-stage {
+    width: 160px;
+    height: 160px;
+  }
+  .portal-feature-tag {
+    padding: 4px 7px;
+    font-size: 0.64rem;
+  }
+  .portal-feature-tag.tag-1 {
+    top: -4px;
+    right: -4px;
+  }
+  .portal-feature-tag.tag-2 {
+    bottom: 12px;
+    left: -6px;
+  }
+  .portal-feature-tag.tag-3 {
+    bottom: -6px;
+    right: 0px;
   }
 }
