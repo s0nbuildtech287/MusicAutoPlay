@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎵 MyMusic Player — MyMusic Internal</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+  <link rel="shortcut icon" href="/favicon.ico?v=3" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=3" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=3" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png?v=3" />
   <link rel="stylesheet" href="/home-portal.css?v=6" />
   <style>
     /* ─── Reset & Base ─── */
@@ -1534,7 +1536,7 @@
 
   <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
     <div class="sidebar-brand">
-      <img src="/favicon.png" alt="MyMusic" />
+      <img src="/favicon.png?v=3" alt="MyMusic" />
       <div><strong>MyMusic</strong><small>Personal Player</small></div>
     </div>
     <nav class="sidebar-nav">
@@ -1590,7 +1592,7 @@
   <!-- App Header -->
   <div class="app-header">
     <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Mở menu">☰</button>
-    <img src="/favicon.png" alt="Logo" class="app-header-logo" id="logo" />
+    <img src="/favicon.png?v=3" alt="Logo" class="app-header-logo" id="logo" />
     <h1>MyMusic Player</h1>
     <span class="badge">MyMusic Internal</span>
     <div class="header-actions">
@@ -1675,7 +1677,7 @@
           <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
             <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
             <div class="np-avatar" id="npAvatar">
-              <img src="/favicon.png" alt="Logo" />
+              <img src="/favicon.png?v=3" alt="Logo" />
             </div>
           </div>
           <div id="npContent">
@@ -1813,7 +1815,7 @@
 
   <div class="personal-player-bar" id="personalPlayerBar">
     <div class="mini-track-info">
-      <div class="mini-cover"><img id="miniPlayerCover" src="/favicon.png" alt="Cover" /></div>
+      <div class="mini-cover"><img id="miniPlayerCover" src="/favicon.png?v=3" alt="Cover" /></div>
       <div class="mini-copy"><strong id="miniPlayerTitle">Chưa phát bài nào</strong><span id="miniPlayerArtist">MyMusic Player</span></div>
     </div>
     <div class="mini-controls">
@@ -3408,7 +3410,7 @@ function renderNowPlaying() {
     const song = state.currentOrderSong;
     const displayTitle = isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title;
     const memberPhoto = `/people/${song.name}.jpg`;
-    npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png'" />`;
+    npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=3'" />`;
     npContent.innerHTML = `
       <p class="np-member" style="color:#fb923c">📱 Yêu cầu bởi: ${song.name}</p>
       <p class="np-title">${displayTitle}</p>
@@ -3424,7 +3426,7 @@ function renderNowPlaying() {
   const song = state.playlist[state.currentIndex];
   if (!song) {
     npAvatar.classList.remove('spinning');
-    npAvatar.innerHTML = '<img src="/favicon.png" alt="Logo" />';
+    npAvatar.innerHTML = '<img src="/favicon.png?v=3" alt="Logo" />';
     npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
     progressArea.style.display = 'none';
     playPauseBtn.textContent = '▶';
@@ -3433,7 +3435,7 @@ function renderNowPlaying() {
 
   // Update avatar with member photo
   const memberPhoto = `/people/${song.name}.jpg`;
-  npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png'" />`;
+  npAvatar.innerHTML = `<img src="${memberPhoto}" alt="${song.name}" onerror="this.src='/favicon.png?v=3'" />`;
 
   npContent.innerHTML = `
     <p class="np-member">👤 ${song.name}</p>
@@ -4444,7 +4446,7 @@ function renderStatsUI() {
       return `
         <div class="leaderboard-item">
           <div class="leaderboard-rank">${rankEmoji}</div>
-          <img class="leaderboard-avatar" src="${avatarSrc}" onerror="this.src='/favicon.png'" alt="${item.name}">
+          <img class="leaderboard-avatar" src="${avatarSrc}" onerror="this.src='/favicon.png?v=3'" alt="${item.name}">
           <div class="leaderboard-name">${escapeHTML(item.name)}</div>
           <div class="leaderboard-count">${item.count} bài</div>
         </div>
