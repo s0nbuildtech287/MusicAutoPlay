@@ -454,14 +454,47 @@
       font-style: italic;
     }
 
-    /* ─── Now Playing ─── */
+    /* ─── Now Playing & Player Card Dark Aesthetic ─── */
+    .col-left .card {
+      background: rgba(18, 14, 28, 0.98) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
     .now-playing {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 28px 20px 20px;
+      padding: 30px 20px 22px;
       gap: 4px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.16) 0%, rgba(20, 15, 33, 0.98) 70%), linear-gradient(180deg, #18122a 0%, #100c1e 100%) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+
+    /* Trạng thái chưa có bài nào chạy (Idle) */
+    .now-playing.is-idle,
+    .card.is-idle .now-playing {
+      background: radial-gradient(circle at 50% 32%, rgba(124, 58, 237, 0.14) 0%, rgba(18, 14, 30, 0.98) 65%), linear-gradient(180deg, #161126 0%, #0e0a1a 100%) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .now-playing.is-idle .np-idle {
+      color: #a39bb8;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      margin-top: 6px;
+    }
+
+    .col-left .card .card-section:last-child {
+      background: rgba(15, 11, 23, 0.98) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
     .np-avatar {
       width: 120px; height: 120px;
@@ -1680,9 +1713,9 @@
     <div class="col-left">
 
       <!-- Player Card -->
-      <div class="card">
+      <div class="card is-idle">
         <!-- Now Playing -->
-        <div class="card-section now-playing">
+        <div class="card-section now-playing is-idle">
           <canvas id="playerWaveform" class="player-waveform" aria-hidden="true"></canvas>
           <div class="np-avatar-container" style="position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; isolation: isolate;">
             <canvas id="circularVisualizer" style="position: absolute; top: 0; left: 0; width: 220px; height: 220px; pointer-events: none; z-index: 0;"></canvas>
@@ -3619,7 +3652,12 @@ function toggleMember(name, chipEl, event) {
 
 function renderNowPlaying() {
   if (typeof syncMiniMusicActions === 'function') syncMiniMusicActions();
+  const playerCard = document.querySelector('.col-left .card');
+  const npSection = document.querySelector('.now-playing');
+
   if (state.currentOrderSong) {
+    playerCard?.classList.remove('is-idle');
+    npSection?.classList.remove('is-idle');
     const song = state.currentOrderSong;
     const displayTitle = isFallbackOrderTitle(song.title) ? 'Đang tải tên bài hát...' : song.title;
     const memberPhoto = `/people/${song.name}.jpg`;
@@ -3638,6 +3676,8 @@ function renderNowPlaying() {
 
   const song = state.playlist[state.currentIndex];
   if (!song) {
+    playerCard?.classList.add('is-idle');
+    npSection?.classList.add('is-idle');
     npAvatar.classList.remove('spinning');
     npAvatar.innerHTML = '<img src="/favicon.png?v=5" alt="Logo" />';
     npContent.innerHTML = '<p class="np-idle">Chưa có bài nào — hãy Load Sheet và bấm Play</p>';
@@ -3645,6 +3685,9 @@ function renderNowPlaying() {
     playPauseBtn.textContent = '▶';
     return;
   }
+
+  playerCard?.classList.remove('is-idle');
+  npSection?.classList.remove('is-idle');
 
   // Update avatar with member photo
   const memberPhoto = `/people/${song.name}.jpg`;
