@@ -2510,8 +2510,10 @@ async function removeSongFromLibrary(song, event) {
     titleInput.value = '';
 
     try {
-      await saveSongToSheet(tempSong);
-      bootstrapMusicLibrary().catch(console.warn);
+      // Chỉ gửi title người dùng nhập. Nếu để trống, backend sẽ gọi YouTube oEmbed
+      // thay vì lưu chuỗi fallback "YouTube (videoId)" vào Sheet.
+      await saveSongToSheet({ ...tempSong, title: enteredTitle });
+      await bootstrapMusicLibrary();
       toast('✅ Đã thêm bài hát vào thư viện');
     } catch (error) {
       console.error(error);

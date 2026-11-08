@@ -91,7 +91,8 @@ function repairSongTitles_() {
   values.forEach((row, index) => {
     const currentTitle = String(row[titleCol] || "").trim();
     const videoId = String(row[vidCol] || "").trim();
-    if (!videoId || (currentTitle && currentTitle !== videoId)) return;
+    const isFallbackTitle = !currentTitle || currentTitle === videoId || currentTitle === `YouTube (${videoId})`;
+    if (!videoId || !isFallbackTitle) return;
     const title = youtubeTitle_(row[urlCol], videoId);
     if (title && title !== currentTitle) {
       sheet.getRange(index + 2, titleCol + 1).setValue(title);
@@ -230,7 +231,12 @@ function doPost(e) {
       );
       if (existing) return json_({ ok: true, duplicate: true, message: "Bài hát đã tồn tại trong danh sách này" });
 
-      const title = String(body.title || "").trim() || youtubeTitle_(body.url, vId);
+      const submittedTitle = String(body.title || "").trim();
+      const fallbackTitle = `YouTube (${vId})`;
+      const isFallbackTitle = !submittedTitle || submittedTitle === vId || submittedTitle === fallbackTitle;
+      const title = isFallbackTitle
+        ? (youtubeTitle_(body.url, vId) || fallbackTitle)
+        : submittedTitle;
       const song = { id: Utilities.getUuid(), userId, playlistId: pId, title, artist: body.artist || "YouTube", url: body.url, vid: vId, createdAt: now };
       append_("songs", song);
       return json_({ ok: true, song });
