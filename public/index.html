@@ -1381,7 +1381,8 @@
       backdrop-filter: blur(20px);
     }
     .sidebar-brand { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 8px; }
-    .sidebar-mobile-close { display:none; width:30px; height:30px; border:1px solid rgba(255,255,255,0.14); border-radius:8px; color:var(--text); background:rgba(255,255,255,0.06); cursor:pointer; align-items:center; justify-content:center; font-size:0.95rem; line-height:1; transition:0.2s ease; }
+    .sidebar-mobile-close { display:none; width:38px; height:38px; min-width:38px; min-height:38px; border:1px solid rgba(255,255,255,0.25); border-radius:10px; color:#fff; background:rgba(255,255,255,0.12); cursor:pointer; align-items:center; justify-content:center; font-size:1.25rem; font-weight:700; line-height:1; transition:0.2s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; z-index:105; pointer-events:auto !important; }
+    .sidebar-mobile-close:active, .sidebar-mobile-close:hover { background:rgba(239,68,68,0.45); border-color:#ef4444; color:#fff; }
     .sidebar-mobile-close:hover { background:rgba(239,68,68,0.25); border-color:#ef4444; color:#fca5a5; }
     .mobile-nav-backdrop { position:fixed; inset:0; z-index:90; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
     body.mobile-nav-open .mobile-nav-backdrop { opacity:1; pointer-events:auto; }
@@ -1582,14 +1583,14 @@
 </head>
 <body data-route="home">
 
-  <div class="mobile-nav-backdrop" id="mobileNavBackdrop" aria-hidden="true"></div>
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop" aria-hidden="true" onclick="document.body.classList.remove('mobile-nav-open')" ontouchend="document.body.classList.remove('mobile-nav-open')"></div>
   <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
     <div class="sidebar-brand">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
         <img src="/favicon.png?v=5" alt="MyMusic" />
         <div><strong>MyMusic</strong><small>Personal Player</small></div>
       </div>
-      <button class="sidebar-mobile-close" id="sidebarMobileClose" type="button" aria-label="Đóng menu">✕</button>
+      <button class="sidebar-mobile-close" id="sidebarMobileClose" type="button" aria-label="Đóng menu" onclick="document.body.classList.remove('mobile-nav-open');if(event)event.stopPropagation();" ontouchend="document.body.classList.remove('mobile-nav-open');if(event)event.stopPropagation();">✕</button>
     </div>
     <nav class="sidebar-nav">
       <button class="sidebar-link active" data-route="home"><span>⌂</span><b>Home</b></button>
@@ -4817,8 +4818,29 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
-<script src="/app-shell.js?v=4"></script>
+<script src="/app-shell.js?v=10"></script>
   <!-- Home Landing Portal & Auth System -->
   <script src="/home-portal.js?v=8"></script>
+
+<script>
+  (function() {
+    function closeNav(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      document.body.classList.remove('mobile-nav-open');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('sidebarMobileClose');
+      var bd = document.getElementById('mobileNavBackdrop');
+      if (btn) {
+        btn.addEventListener('click', closeNav);
+        btn.addEventListener('touchend', closeNav);
+      }
+      if (bd) {
+        bd.addEventListener('click', closeNav);
+        bd.addEventListener('touchend', closeNav);
+      }
+    });
+  })();
+</script>
 </body>
 </html>
