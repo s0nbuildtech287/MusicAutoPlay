@@ -10,3 +10,4 @@ router.post('/register', validateBody(['username', 'password']), authController.
 router.get('/profile', verifyToken, authController.getProfile);
 
 module.exports = router;
+

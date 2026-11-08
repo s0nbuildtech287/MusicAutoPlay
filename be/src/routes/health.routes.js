@@ -6,3 +6,4 @@ const router = Router();
 router.get('/', (req, res) => healthController.check(req, res));
 
 module.exports = router;
+

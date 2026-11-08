@@ -7,3 +7,4 @@ router.get('/', playlistController.listPlaylists);
 router.post('/sync', playlistController.syncCloud);
 
 module.exports = router;
+

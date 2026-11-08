@@ -6,3 +6,4 @@ const router = Router();
 router.get('/', streamController.handleStream);
 
 module.exports = router;
+

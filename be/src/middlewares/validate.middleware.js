@@ -35,3 +35,4 @@ const validateQuery = (requiredParams = []) => {
 };
 
 module.exports = { validateBody, validateQuery };
+

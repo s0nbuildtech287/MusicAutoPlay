@@ -57,3 +57,4 @@ src/
 2. **Fair-Play Queue Algorithm**: Anti-monopoly queue logic preventing single users from dominating playback, automatically weaving public song requests between catalog items.
 3. **Resilient Cloud Integration**: Transparent proxy and sync layer linking Google Apps Script / Google Sheets with zero CORS friction.
 4. **Production Observability**: Built-in health probing, graceful SIGINT/SIGTERM process teardown, and comprehensive structured error handling.
+
