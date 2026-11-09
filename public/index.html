@@ -3966,6 +3966,46 @@ function togglePlayPause() {
   }
 }
 
+function getEffectiveDuration() {
+  const song = state.currentOrderSong || (state.playlist && state.playlist[state.currentIndex]);
+  if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) return audioEl.duration;
+  if (song && Number.isFinite(song.duration) && song.duration > 0) return song.duration;
+  if (Number.isFinite(state.currentSongDuration) && state.currentSongDuration > 0) return state.currentSongDuration;
+  return 0;
+}
+
+function updateProgressUI() {
+  const dur = getEffectiveDuration();
+  const cur = audioEl.currentTime || 0;
+  const pct = dur > 0 ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
+
+  if (progressFill) progressFill.style.width  = pct + '%';
+  if (progressThumb) progressThumb.style.left  = pct + '%';
+  if (timeElapsed) timeElapsed.textContent   = fmtTime(cur);
+  if (timeDuration) timeDuration.textContent  = dur > 0 ? fmtTime(dur) : '--:--';
+}
+
+function fetchSongDuration(song) {
+  if (!song || !song.vid) return;
+  if (song.duration && song.duration > 0) {
+    state.currentSongDuration = song.duration;
+    updateProgressUI();
+    window.dispatchEvent(new CustomEvent('music-duration-updated', { detail: { duration: song.duration } }));
+    return;
+  }
+  fetch('/api/duration?id=' + encodeURIComponent(song.vid))
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.duration > 0) {
+        song.duration = data.duration;
+        state.currentSongDuration = data.duration;
+        updateProgressUI();
+        window.dispatchEvent(new CustomEvent('music-duration-updated', { detail: { duration: data.duration } }));
+      }
+    })
+    .catch(() => {});
+}
+
 // ═══════════════════════════════════════════════════════
 //  AUDIO EVENTS
 // ═══════════════════════════════════════════════════════
