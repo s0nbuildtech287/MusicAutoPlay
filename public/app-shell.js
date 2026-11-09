@@ -271,8 +271,21 @@
     legacyVolume.value = miniVolume.value;
     legacyVolume.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  const getShellDuration = () => {
+    const song = window.state?.currentOrderSong || (window.state?.playlist && window.state.playlist[window.state.currentIndex]);
+    if (audio && Number.isFinite(audio.duration) && audio.duration > 0) return audio.duration;
+    if (song && Number.isFinite(song.duration) && song.duration > 0) return song.duration;
+    if (window.state?.currentSongDuration && Number.isFinite(window.state.currentSongDuration) && window.state.currentSongDuration > 0) {
+      return window.state.currentSongDuration;
+    }
+    return 0;
+  };
+
   miniSeek?.addEventListener('input', () => {
-    if (audio?.duration) audio.currentTime = (Number(miniSeek.value) / 100) * audio.duration;
+    const dur = getShellDuration();
+    if (dur > 0 && audio) {
+      audio.currentTime = (Number(miniSeek.value) / 100) * dur;
+    }
   });
   $('miniPanel')?.addEventListener('click', () => {
     const open = !body.classList.contains('right-panel-hidden');
@@ -308,13 +321,19 @@
   };
   const syncProgress = () => {
     if (!audio) return;
-    const percent = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-    if (miniSeek) miniSeek.value = String(percent || 0);
-    if ($('miniElapsed')) $('miniElapsed').textContent = formatTime(audio.currentTime);
-    if ($('miniDuration')) $('miniDuration').textContent = formatTime(audio.duration);
+    const dur = getShellDuration();
+    const cur = audio.currentTime || 0;
+    const percent = dur > 0 ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
+    if (miniSeek) {
+      miniSeek.value = String(percent || 0);
+      miniSeek.style.background = `linear-gradient(to right, var(--accent2, #a78bfa) 0%, var(--accent2, #a78bfa) ${percent}%, rgba(255,255,255,0.15) ${percent}%, rgba(255,255,255,0.15) 100%)`;
+    }
+    if ($('miniElapsed')) $('miniElapsed').textContent = formatTime(cur);
+    if ($('miniDuration')) $('miniDuration').textContent = dur > 0 ? formatTime(dur) : '--:--';
     syncMiniPlayer();
   };
   ['timeupdate', 'loadedmetadata', 'durationchange', 'play', 'pause', 'ended'].forEach((event) => audio?.addEventListener(event, syncProgress));
+  window.addEventListener('music-duration-updated', syncProgress);
   if (npContent) new MutationObserver(syncMiniPlayer).observe(npContent, { childList: true, subtree: true, characterData: true });
   if (npAvatar) new MutationObserver(syncMiniPlayer).observe(npAvatar, { childList: true, subtree: true, attributes: true });
   const syncHomeInsights = () => {

@@ -3358,7 +3358,7 @@ function drawCircularVisualizer(now, playing, pulseFactor) {
 //  UTILS
 // ═══════════════════════════════════════════════════════
 function fmtTime(s) {
-  if (!s || isNaN(s)) return '0:00';
+  if (!s || isNaN(s) || !Number.isFinite(s) || s < 0) return '0:00';
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2,'0')}`;
 }
@@ -3814,6 +3814,10 @@ function playSong(index) {
   state.currentIndex = index;
   const song = state.playlist[index];
 
+  // Track and fetch accurate song duration
+  state.currentSongDuration = song.duration || 0;
+  fetchSongDuration(song);
+
   // Set audio src dynamically (local endpoint or royalty-free fallback)
   audioEl.src = getAudioStreamUrl(song.vid, song.title);
   audioEl.volume = state.volume / 100;
@@ -3842,6 +3846,8 @@ function playSong(index) {
 function playOrderSong(song) {
   if (!state.isPlaybackLoading) setPlaybackLoading(true, 'play');
   state.currentOrderSong = song;
+  state.currentSongDuration = song.duration || 0;
+  fetchSongDuration(song);
   audioEl.src = getAudioStreamUrl(song.vid, song.title);
   audioEl.volume = state.volume / 100;
   ensureVisualizer();
@@ -3981,16 +3987,9 @@ audioEl.addEventListener('error', () => {
   }
 });
 
-audioEl.addEventListener('timeupdate', () => {
-  const dur = audioEl.duration || 0;
-  const cur = audioEl.currentTime || 0;
-  const pct = dur ? (cur / dur) * 100 : 0;
-
-  progressFill.style.width  = pct + '%';
-  progressThumb.style.left  = pct + '%';
-  timeElapsed.textContent   = fmtTime(cur);
-  timeDuration.textContent  = fmtTime(dur);
-});
+audioEl.addEventListener('timeupdate', updateProgressUI);
+audioEl.addEventListener('loadedmetadata', updateProgressUI);
+audioEl.addEventListener('durationchange', updateProgressUI);
 
 audioEl.addEventListener('play',  () => { state.isPlaying = true;  renderNowPlaying(); });
 audioEl.addEventListener('pause', () => { state.isPlaying = false; renderNowPlaying(); });
@@ -3998,8 +3997,12 @@ audioEl.addEventListener('pause', () => { state.isPlaying = false; renderNowPlay
 // Click on progress bar to seek
 progressTrack.addEventListener('click', e => {
   const rect = progressTrack.getBoundingClientRect();
-  const pct = (e.clientX - rect.left) / rect.width;
-  if (audioEl.duration) audioEl.currentTime = pct * audioEl.duration;
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const dur = getEffectiveDuration();
+  if (dur > 0) {
+    audioEl.currentTime = pct * dur;
+    updateProgressUI();
+  }
 });
 
 // ═══════════════════════════════════════════════════════
@@ -4818,7 +4821,7 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
-<script src="/app-shell.js?v=10"></script>
+<script src="/app-shell.js?v=11"></script>
   <!-- Home Landing Portal & Auth System -->
   <script src="/home-portal.js?v=8"></script>
 
