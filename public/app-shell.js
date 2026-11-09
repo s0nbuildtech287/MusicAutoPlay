@@ -323,6 +323,12 @@
     if (!audio) return;
     const dur = getShellDuration();
     const cur = audio.currentTime || 0;
+    if (dur > 0 && cur >= Math.max(5, dur - 0.5) && !window.state?.isPlaybackLoading) {
+      if (typeof window.playNext === 'function') {
+        window.playNext();
+        return;
+      }
+    }
     const percent = dur > 0 ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
     if (miniSeek) {
       miniSeek.value = String(percent || 0);

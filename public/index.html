@@ -3977,6 +3977,15 @@ function getEffectiveDuration() {
 function updateProgressUI() {
   const dur = getEffectiveDuration();
   const cur = audioEl.currentTime || 0;
+
+  // Hard boundary auto-advance: if audio has played to or past the track duration (e.g. 3:04),
+  // immediately transition to next song, preventing runaway time (3:20 / 3:04) and stream looping.
+  if (dur > 0 && cur >= Math.max(5, dur - 0.5) && !state.isPlaybackLoading) {
+    state.isPlaying = false;
+    playNext();
+    return;
+  }
+
   const pct = dur > 0 ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
 
   if (progressFill) progressFill.style.width  = pct + '%';
@@ -4882,9 +4891,9 @@ setInterval(updateHostOrders, 3000);
 
 <!-- Fun Features -->
 <script src="/fun-features.js"></script>
-<script src="/app-shell.js?v=11"></script>
+<script src="/app-shell.js?v=12"></script>
   <!-- Home Landing Portal & Auth System -->
-  <script src="/home-portal.js?v=9"></script>
+  <script src="/home-portal.js?v=10"></script>
 
 <script>
   (function() {
