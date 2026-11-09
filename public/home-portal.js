@@ -409,6 +409,14 @@
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.setItem(GUEST_MODE_KEY, '1');
       unlockPlayerAndDismiss('Guest');
+      if (typeof window.bootstrapMusicLibrary === 'function') {
+        window.bootstrapMusicLibrary();
+      }
+      setTimeout(() => {
+        if (typeof window.playSong === 'function' && window.state && window.state.playlist && window.state.playlist.length > 0) {
+          window.playSong(0);
+        }
+      }, 350);
     }
 
     const navDemoBtn = document.getElementById('portalNavDemoBtn');

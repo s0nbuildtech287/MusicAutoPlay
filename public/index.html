@@ -2177,7 +2177,9 @@ const GUEST_SONGS = [
 ];
 
 function isGuestMode() {
-  return getMusicUser().userId === 'guest';
+  if (localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') return true;
+  const user = getMusicUser();
+  return String(user.userId || '').toLowerCase() === 'guest';
 }
 window.isMusicGuestMode = isGuestMode;
 window.requireMusicLogin = function requireMusicLogin() {
@@ -2187,13 +2189,18 @@ window.requireMusicLogin = function requireMusicLogin() {
 };
 
 function getMusicUser() {
+  if (localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') {
+    return { userId: 'guest', displayName: 'Guest' };
+  }
   const raw = localStorage.getItem(MUSIC_USER_KEY) || '';
-  if (!raw && localStorage.getItem(MUSIC_GUEST_MODE_KEY) === '1') return { userId: 'guest', displayName: 'Guest' };
+  if (!raw) return { userId: 'guest', displayName: 'Guest' };
   try {
     const user = JSON.parse(raw);
-    return { userId: user.username || user.userId || 'guest', displayName: user.displayName || user.name || user.username || 'Guest' };
+    const id = user.username || user.userId || 'guest';
+    return { userId: id, displayName: user.displayName || user.name || id };
   } catch (_) {
-    return { userId: raw || 'guest', displayName: raw || 'Guest' };
+    if (String(raw).toLowerCase() === 'guest') return { userId: 'guest', displayName: 'Guest' };
+    return { userId: raw, displayName: raw };
   }
 }
 
@@ -3876,23 +3883,27 @@ function jumpTo(index) {
 async function playNext(skip = false) {
   if (state.isPlaybackLoading) return;
   setPlaybackLoading(true, 'next');
-  try {
-    const res = await fetch('/api/orders/next', { method: 'POST' });
-    if (!res.ok) throw new Error('API Error');
-    const data = await res.json();
 
-    if (data.nextSong) {
-      const song = data.nextSong;
-      if (skip) {
-        toast(`⏭ Bỏ qua: Phát nhạc order từ ${song.name}`);
-      } else {
-        toast(`🎵 Đang phát nhạc order của: ${song.name}`);
+  // Skip remote order check in guest mode to avoid latency and mobile autoplay restriction
+  if (!isGuestMode()) {
+    try {
+      const res = await fetch('/api/orders/next', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.nextSong) {
+          const song = data.nextSong;
+          if (skip) {
+            toast(`⏭ Bỏ qua: Phát nhạc order từ ${song.name}`);
+          } else {
+            toast(`🎵 Đang phát nhạc order của: ${song.name}`);
+          }
+          playOrderSong(song);
+          return;
+        }
       }
-      playOrderSong(song);
-      return;
+    } catch (err) {
+      console.warn('Failed to query next order, falling back to sheet:', err);
     }
-  } catch (err) {
-    console.warn('Failed to query next order, falling back to sheet:', err);
   }
 
   // Fallback to normal playlist
@@ -3992,7 +4003,17 @@ audioEl.addEventListener('loadedmetadata', updateProgressUI);
 audioEl.addEventListener('durationchange', updateProgressUI);
 
 audioEl.addEventListener('play',  () => { state.isPlaying = true;  renderNowPlaying(); });
-audioEl.addEventListener('pause', () => { state.isPlaying = false; renderNowPlaying(); });
+audioEl.addEventListener('pause', () => {
+  state.isPlaying = false;
+  const dur = getEffectiveDuration();
+  const cur = audioEl.currentTime || 0;
+  // If paused near the end of the song (iOS Safari triggers pause instead of ended on live chunked streams)
+  if (dur > 0 && cur >= Math.max(10, dur - 2) && !state.isPlaybackLoading) {
+    playNext();
+    return;
+  }
+  renderNowPlaying();
+});
 
 // Click on progress bar to seek
 progressTrack.addEventListener('click', e => {
@@ -4823,7 +4844,7 @@ setInterval(updateHostOrders, 3000);
 <script src="/fun-features.js"></script>
 <script src="/app-shell.js?v=11"></script>
   <!-- Home Landing Portal & Auth System -->
-  <script src="/home-portal.js?v=8"></script>
+  <script src="/home-portal.js?v=9"></script>
 
 <script>
   (function() {
